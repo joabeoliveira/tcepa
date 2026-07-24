@@ -39,7 +39,7 @@ su postgres -c "psql -c \"SELECT 1 FROM pg_roles WHERE rolname='tcepa'\" | grep 
 su postgres -c "psql -c \"ALTER DATABASE tcepa OWNER TO tcepa;\"" 2>/dev/null || true
 su postgres -c "psql -d tcepa -c \"GRANT ALL ON SCHEMA public TO tcepa;\"" 2>/dev/null || true
 su postgres -c "psql -d tcepa -f /app/init.sql" 2>/dev/null || true
-su postgres -c "psql -d tcepa -c \"ALTER SCHEMA public OWNER TO tcepa;\"" 2>/dev/null || true
+su postgres -c "psql -d tcepa -c \"REASSIGN OWNED BY postgres TO tcepa;\"" 2>/dev/null || true
 
 echo "[5/6] Verificando dados..."
 HAS_DATA=$(su postgres -c "psql -d tcepa -t -c \"SELECT COUNT(*) FROM licitacoes;\"" 2>/dev/null | tr -d ' ' || echo "0")
