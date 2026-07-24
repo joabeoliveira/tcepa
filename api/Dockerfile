@@ -2,39 +2,69 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# As COPY são relativas ao build context (raiz do repositório)
-# O Dockerfile está em api/, mas o EasyPanel usa a raiz como contexto
+# =============================================
+# Instala PostgreSQL no mesmo container
+# =============================================
+RUN apk add --no-cache postgresql postgresql-client
 
-# Copia os arquivos de dependências da pasta api/
+# Copia dependências Node e instala
 COPY api/package*.json ./
-
-# Instala dependências de produção (sql.js é WASM, não precisa de compilação nativa)
 RUN npm install --omit=dev
-# Copia o código fonte da pasta api/src/
+
+# Copia código fonte
 COPY api/src/ ./src/
 
-# Copia o script de inicialização
-COPY api/start.sh ./start.sh
+# Copia schema SQL e código
+COPY api/init.sql ./init.sql
 
-# Copia os arquivos XML de licitação para dentro do container
+# Copia arquivos XML (para importação automática)
 COPY 2026_*.xml ./xml/
 
-# Cria diretório para o banco de dados e dá permissão
-RUN mkdir -p /app/data && chmod +x /app/start.sh && chown -R node:node /app/data /app/xml /app/start.sh
-
-# Usuário não-root para segurança
-USER node
-
-# Expõe a porta da API
+# Expõe porta da API
 EXPOSE 3000
 
-# Volume para persistência do banco de dados
-# No EasyPanel, monte um volume persistente em /app/data
-VOLUME ["/app/data"]
+# Script de inicialização: sobe PostgreSQL, importa dados, inicia API
+RUN echo '#!/bin/sh\n\
+set -e\n\
+\n\
+PGDATA=/var/lib/postgresql/data\n\
+\n\
+# Inicializa PostgreSQL se necessário\n\
+if [ ! -d "$PGDATA/pgdata" ]; then\n\
+  echo "🐘 Inicializando PostgreSQL..."\n\
+  mkdir -p $PGDATA\n\
+  chown -R postgres:postgres $PGDATA\n\
+  su - postgres -c "initdb -D $PGDATA/pgdata"\n\
+  echo "host all all 0.0.0.0/0 md5" >> $PGDATA/pgdata/pg_hba.conf\n\
+  echo "listen_addresses='*'" >> $PGDATA/pgdata/postgresql.conf\n\
+fi\n\
+\n\
+# Inicia PostgreSQL\n\
+su - postgres -c "pg_ctl -D $PGDATA/pgdata -l /var/log/pg.log start"\n\
+\n\
+# Aguarda PostgreSQL ficar pronto\n\
+until pg_isready -h 127.0.0.1 2>/dev/null; do sleep 1; done\n\
+echo "✅ PostgreSQL pronto!"\n\
+\n\
+# Cria database e usuário se não existir\n\
+su - postgres -c "psql -c \\"CREATE DATABASE tcepa;\\"" 2>/dev/null || true\n\
+su - postgres -c "psql -c \\"CREATE USER tcepa WITH PASSWORD '"'"'${DB_PASSWORD:-tcepa123}'"'"';\\"" 2>/dev/null || true\n\
+su - postgres -c "psql -c \\"GRANT ALL PRIVILEGES ON DATABASE tcepa TO tcepa;\\"" 2>/dev/null || true\n\
+\n\
+# Executa schema\n\
+su - postgres -c "psql -d tcepa -f /app/init.sql" 2>/dev/null || true\n\
+\n\
+# Importa dados (se banco vazio)\n\
+echo "📦 Verificando dados..."\n\
+HAS_DATA=$(su - postgres -c "psql -d tcepa -t -c \\"SELECT COUNT(*) FROM licitacoes;\\"" 2>/dev/null | tr -d " " || echo "0")\n\
+if [ "$HAS_DATA" = "0" ] || [ -z "$HAS_DATA" ]; then\n\
+  echo "📦 Importando XMLs..."\n\
+  ls /app/xml/2026_*.xml 2>/dev/null && node /app/src/import-xml-pg.js "/app/xml/2026_*.xml" || echo "⚠️  Nenhum XML encontrado"\n\
+fi\n\
+\n\
+# Inicia a API\n\
+echo "🚀 Iniciando API..."\n\
+exec node /app/src/index-pg.js\n\
+' > /app/start-pg.sh && chmod +x /app/start-pg.sh
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
-
-# Script de entrada: importa XMLs se necessário, depois inicia a API
-CMD ["sh", "/app/start.sh"]
+CMD ["sh", "/app/start-pg.sh"]
