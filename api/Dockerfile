@@ -9,8 +9,7 @@ WORKDIR /app
 COPY api/package*.json ./
 
 # Instala dependências de produção (sql.js é WASM, não precisa de compilação nativa)
-RUN npm ci --omit=dev
-
+RUN npm install --omit=dev
 # Copia o código fonte da pasta api/src/
 COPY api/src/ ./src/
 
