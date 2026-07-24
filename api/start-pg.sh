@@ -42,6 +42,10 @@ su postgres -c "psql -d tcepa -c \"GRANT ALL ON SCHEMA public TO tcepa;\"" 2>/de
 # Schema e tabelas - executado como tcepa para ownership correto
 PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -U tcepa -d tcepa -f /app/init.sql 2>/dev/null || true
 
+# Corrige ownership se a tabela ja existia (volume com dados antigos)
+su postgres -c "psql -d tcepa -c \"ALTER TABLE IF EXISTS licitacoes OWNER TO tcepa;\"" 2>/dev/null || true
+su postgres -c "psql -d tcepa -c \"ALTER TABLE IF EXISTS xml_importados OWNER TO tcepa;\"" 2>/dev/null || true
+
 echo "[5/6] Verificando dados..."
 HAS_DATA=$(su postgres -c "psql -d tcepa -t -c \"SELECT COUNT(*) FROM licitacoes;\"" 2>/dev/null | tr -d ' ' || echo "0")
 if [ "$HAS_DATA" = "0" ] || [ -z "$HAS_DATA" ]; then
