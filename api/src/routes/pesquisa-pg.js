@@ -1,67 +1,6 @@
 /**
  * Rotas de pesquisa - Versão PostgreSQL
- * Usa busca textual com ILIKE + índice trigram para performance
  */
-
-/**
- * @swagger
- * /api/pesquisa:
- *   get:
- *     tags: [Pesquisa]
- *     summary: Buscar licitações por descrição do item
- *     parameters:
- *       - in: query
- *         name: q
- *         required: true
- *         schema: { type: string }
- *         description: Termo de busca (ex: motobomba, cimento, bermuda)
- *       - in: query
- *         name: limite
- *         schema: { type: integer, default: 20, maximum: 100 }
- *         description: Resultados por página
- *       - in: query
- *         name: pagina
- *         schema: { type: integer, default: 1 }
- *         description: Número da página
- *       - in: query
- *         name: municipio
- *         schema: { type: string }
- *         description: Filtrar por município (nome exato)
- *       - in: query
- *         name: ano
- *         schema: { type: integer }
- *         description: Filtrar por ano da licitação
- *       - in: query
- *         name: ordenar
- *         schema: { type: string, enum: [relevancia, preco, data], default: relevancia }
- *         description: Critério de ordenação
- *     responses:
- *       200:
- *         description: Resultados da busca
- *       400:
- *         description: Parâmetro 'q' não informado
- */
-/**
- * @swagger
- * /api/pesquisa/municipios:
- *   get:
- *     tags: [Info]
- *     summary: Listar municípios disponíveis no banco
- *     responses:
- *       200:
- *         description: Lista de municípios com total de licitações
- */
-/**
- * @swagger
- * /api/pesquisa/estatisticas:
- *   get:
- *     tags: [Info]
- *     summary: Estatísticas gerais do banco de dados
- *     responses:
- *       200:
- *         description: Totais de licitações, municípios, entidades e fornecedores
- */
-
 const express = require('express');
 const { exec, get } = require('../database-pg');
 
