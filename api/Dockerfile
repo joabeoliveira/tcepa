@@ -13,8 +13,11 @@ RUN npm install --omit=dev
 # Copia o código fonte da pasta api/src/
 COPY api/src/ ./src/
 
+# Copia os arquivos XML de licitação para dentro do container
+COPY 2026_*.xml ./xml/
+
 # Cria diretório para o banco de dados
-RUN mkdir -p /app/data && chown -R node:node /app/data
+RUN mkdir -p /app/data && chown -R node:node /app/data /app/xml
 
 # Usuário não-root para segurança
 USER node
