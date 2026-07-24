@@ -28,6 +28,10 @@ USER node
 # Expõe a porta da API
 EXPOSE 3000
 
+# Volume para persistência do banco de dados
+# No EasyPanel, monte um volume persistente em /app/data
+VOLUME ["/app/data"]
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
