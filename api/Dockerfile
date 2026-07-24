@@ -13,11 +13,14 @@ RUN npm install --omit=dev
 # Copia o código fonte da pasta api/src/
 COPY api/src/ ./src/
 
+# Copia o script de inicialização
+COPY api/start.sh ./start.sh
+
 # Copia os arquivos XML de licitação para dentro do container
 COPY 2026_*.xml ./xml/
 
-# Cria diretório para o banco de dados
-RUN mkdir -p /app/data && chown -R node:node /app/data /app/xml
+# Cria diretório para o banco de dados e dá permissão
+RUN mkdir -p /app/data && chmod +x /app/start.sh && chown -R node:node /app/data /app/xml /app/start.sh
 
 # Usuário não-root para segurança
 USER node
@@ -29,5 +32,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
-# Comando de inicialização
-CMD ["node", "src/index.js"]
+# Script de entrada: importa XMLs se necessário, depois inicia a API
+CMD ["sh", "/app/start.sh"]
