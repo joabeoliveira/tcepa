@@ -24,3 +24,8 @@ Desktop.ini
 api/node_modules/
 api/data/
 api/package-lock.json
+
+# Pastas de arquivos pesados para não subir no repositório
+data/
+dados/
+
