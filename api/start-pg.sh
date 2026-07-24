@@ -18,6 +18,9 @@ else
 fi
 
 echo "[2/6] Iniciando servico PostgreSQL..."
+# Cria diretorio para o socket/lock do PostgreSQL
+mkdir -p /run/postgresql
+chown postgres:postgres /run/postgresql
 # Remove pid file stale se houver (restart do container)
 rm -f "$PGDATA/pgdata/postmaster.pid" 2>/dev/null || true
 su postgres -c "pg_ctl -D $PGDATA/pgdata -l $PGDATA/pg.log start" || { echo "ERRO: pg_ctl falhou"; cat "$PGDATA/pg.log" 2>/dev/null; exit 1; }
