@@ -44,23 +44,38 @@ function salvar() {
 }
 
 /**
- * Wrapper para execução de queries com salvamento automático
+ * Wrapper para execução de queries SELECT com parâmetros.
+ * usa db.exec() do sql.js que é mais robusto que prepare/step.
  */
 function exec(sql, params = []) {
   if (!db) throw new Error('Banco não inicializado. Chame getDatabase() primeiro.');
-  const stmt = db.prepare(sql);
 
+  // Se tem parâmetros, usa prepared statement
   if (params.length > 0) {
+    const stmt = db.prepare(sql);
     stmt.bind(params);
+    const results = [];
+    while (stmt.step()) {
+      results.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return results;
   }
 
-  const results = [];
-  while (stmt.step()) {
-    results.push(stmt.getAsObject());
-  }
+  // Sem parâmetros, usa db.exec() que é mais simples
+  const raw = db.exec(sql);
+  if (!raw || raw.length === 0) return [];
 
-  stmt.free();
-  return results;
+  const columns = raw[0].columns;
+  const values = raw[0].values || [];
+
+  return values.map(row => {
+    const obj = {};
+    columns.forEach((col, i) => {
+      obj[col] = row[i];
+    });
+    return obj;
+  });
 }
 
 /**
@@ -72,11 +87,16 @@ function get(sql, params = []) {
 }
 
 /**
- * Executa comandos DDL/DML sem retorno (salva automaticamente)
+ * Executa comandos DDL/DML sem retorno (salva automaticamente).
+ * Usa db.exec() que suporta múltiplos statements separados por ;
  */
 function run(sql, params = []) {
   if (!db) throw new Error('Banco não inicializado.');
-  db.run(sql, params);
+  if (params.length > 0) {
+    db.run(sql, params);
+  } else {
+    db.exec(sql);
+  }
   salvar();
 }
 
@@ -87,7 +107,11 @@ function run(sql, params = []) {
 function runBatch(queries) {
   if (!db) throw new Error('Banco não inicializado.');
   for (const [sql, params] of queries) {
-    db.run(sql, params || []);
+    if (params && params.length > 0) {
+      db.run(sql, params);
+    } else {
+      db.exec(sql);
+    }
   }
   salvar();
 }
@@ -96,7 +120,7 @@ function runBatch(queries) {
  * Cria as tabelas e índices
  */
 function criarTabelas() {
-  db.run(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS licitacoes (
       id                INTEGER PRIMARY KEY AUTOINCREMENT,
       cd_ibge           TEXT NOT NULL,
@@ -134,16 +158,13 @@ function criarTabelas() {
       ultimo_envio_simam_neste_exercicio TEXT,
       data_referencia   TEXT
     );
-  `);
 
-  db.run(`
     CREATE INDEX IF NOT EXISTS idx_ds_item ON licitacoes(ds_item);
     CREATE INDEX IF NOT EXISTS idx_municipio ON licitacoes(cd_ibge, nm_municipio);
     CREATE INDEX IF NOT EXISTS idx_modalidade ON licitacoes(ds_modalidade_licitacao);
     CREATE INDEX IF NOT EXISTS idx_ano ON licitacoes(nr_ano_licitacao);
     CREATE INDEX IF NOT EXISTS idx_documento ON licitacoes(nr_documento);
   `);
-
 }
 
 module.exports = { getDatabase, exec, get, run, runBatch, salvar };
