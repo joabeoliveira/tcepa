@@ -10,7 +10,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { run, exec, fechar } = require('./database-pg');
+const { run, get, fechar } = require('./database-pg');
 
 // Cache para saber quais arquivos já foram importados
 const HASH_TABLE = 'xml_importados';
