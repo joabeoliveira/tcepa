@@ -1,0 +1,29 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instala dependências para pg (cliente PostgreSQL)
+RUN apk add --no-cache postgresql-client
+
+# Copia dependências e instala
+COPY api/package*.json ./
+RUN npm install --omit=dev
+
+# Copia código fonte
+COPY api/src/ ./src/
+
+# Expõe a porta
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
+
+# Aguarda PostgreSQL ficar pronto e inicia
+CMD ["sh", "-c", "\
+  echo 'Aguardando PostgreSQL...' && \
+  until pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER 2>/dev/null; do sleep 1; done && \
+  echo 'PostgreSQL pronto!' && \
+  node src/import-xml-pg.js && \
+  node src/index.js \
+"]
