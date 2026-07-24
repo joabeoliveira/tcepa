@@ -11,6 +11,17 @@ const swaggerSpec = {
     description: 'API REST para consulta de preços em licitações públicas do Tribunal de Contas do Estado do Paraná.\n\n**Exemplos:**\n- `/api/pesquisa?q=motobomba&limite=5`\n- `/api/pesquisa?q=cimento&municipio=CURITIBA`\n- `/api/pesquisa?q=camiseta&ordenar=preco`',
   },
   servers: [{ url: '/', description: 'Servidor atual' }],
+  components: {
+    securitySchemes: {
+      ApiKeyHeader: {
+        type: 'apiKey',
+        in: 'header',
+        name: 'x-api-key',
+        description: 'API Key para autenticação. Pode ser enviada também como ?api_key=SUACHAVE na query string.',
+      },
+    },
+  },
+  security: [{ ApiKeyHeader: [] }],
   tags: [
     { name: 'Pesquisa', description: 'Busca de licitações por descrição do item' },
     { name: 'Info', description: 'Informações e estatísticas' },

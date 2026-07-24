@@ -7,6 +7,7 @@ const cors = require('cors');
 const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./swagger');
+const authMiddleware = require('./middleware/auth');
 const { getDatabase } = require('./database-pg');
 const { router: pesquisaRoutes } = require('./routes/pesquisa-pg');
 
@@ -18,8 +19,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rotas da API
-app.use('/api/pesquisa', pesquisaRoutes);
+// Rotas da API (protegidas por API Key)
+app.use('/api/pesquisa', authMiddleware, pesquisaRoutes);
 
 // Swagger
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
