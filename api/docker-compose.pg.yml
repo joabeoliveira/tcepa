@@ -1,10 +1,12 @@
 # API de Pesquisa de Preços com PostgreSQL
+# Uso no EasyPanel: importe este arquivo como Docker Compose
+# A pasta raiz do repositório é o contexto de build
 
 version: '3.8'
 
 services:
   # =============================================
-  # Banco de dados PostgreSQL
+  # Banco de dados PostgreSQL (exclusivo da API)
   # =============================================
   db:
     image: postgres:16-alpine
@@ -28,8 +30,8 @@ services:
   # =============================================
   api:
     build:
-      context: .
-      dockerfile: Dockerfile.pg
+      context: ..
+      dockerfile: api/Dockerfile.pg
     container_name: tcepa-api
     restart: unless-stopped
     ports:
