@@ -19,6 +19,7 @@ COPY api/init.sql ./init.sql
 
 # Copia script de inicialização do PostgreSQL
 COPY api/start-pg.sh ./start-pg.sh
+RUN chmod +x /app/start-pg.sh
 
 # Copia arquivos XML (para importação automática)
 COPY 2026_*.xml ./xml/
@@ -26,7 +27,9 @@ COPY 2026_*.xml ./xml/
 # Expõe porta da API
 EXPOSE 3000
 
-# Script de entrada
-CMD ["sh", "/app/start-pg.sh"]
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1
 
+# Script de entrada
 CMD ["sh", "/app/start-pg.sh"]

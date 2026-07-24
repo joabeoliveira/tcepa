@@ -1,41 +1,48 @@
 #!/bin/sh
-set -e
 
 PGDATA=/var/lib/postgresql/data
+DB_PASSWORD="${DB_PASSWORD:-tcepa123}"
+
+echo "=== Inicializando container ==="
 
 # Inicializa PostgreSQL se necessario
 if [ ! -d "$PGDATA/pgdata" ]; then
-  echo "Inicializando PostgreSQL..."
+  echo "[1/6] Inicializando PostgreSQL..."
   mkdir -p "$PGDATA"
   chown -R postgres:postgres "$PGDATA"
-  su postgres -c "initdb -D $PGDATA/pgdata"
+  su postgres -c "initdb -D $PGDATA/pgdata" || { echo "ERRO: initdb falhou"; exit 1; }
   echo "host all all 0.0.0.0/0 md5" >> "$PGDATA/pgdata/pg_hba.conf"
   echo "listen_addresses='*'" >> "$PGDATA/pgdata/postgresql.conf"
+else
+  echo "[1/6] PostgreSQL ja inicializado"
 fi
 
-# Inicia PostgreSQL
-su postgres -c "pg_ctl -D $PGDATA/pgdata -l /var/log/pg.log start"
+echo "[2/6] Iniciando servico PostgreSQL..."
+su postgres -c "pg_ctl -D $PGDATA/pgdata -l /var/log/pg.log start" || { echo "ERRO: pg_ctl falhou"; exit 1; }
 
-# Aguarda PostgreSQL ficar pronto
-until pg_isready -h 127.0.0.1 2>/dev/null; do sleep 1; done
+echo "[3/6] Aguardando PostgreSQL..."
+for i in $(seq 1 30); do
+  pg_isready -h 127.0.0.1 >/dev/null 2>&1 && break
+  sleep 1
+done
+pg_isready -h 127.0.0.1 || { echo "ERRO: PostgreSQL nao iniciou a tempo"; exit 1; }
 echo "PostgreSQL pronto!"
 
-# Cria database e usuario se nao existir
-su postgres -c "psql -c \"CREATE DATABASE tcepa;\"" 2>/dev/null || true
-su postgres -c "psql -c \"CREATE USER tcepa WITH PASSWORD '${DB_PASSWORD:-tcepa123}';\"" 2>/dev/null || true
+echo "[4/6] Configurando database..."
+su postgres -c "psql -c \"SELECT 1 FROM pg_database WHERE datname='tcepa'\" | grep -q 1 || psql -c \"CREATE DATABASE tcepa;\"" 2>/dev/null || true
+su postgres -c "psql -c \"SELECT 1 FROM pg_roles WHERE rolname='tcepa'\" | grep -q 1 || psql -c \"CREATE USER tcepa WITH PASSWORD '$DB_PASSWORD';\"" 2>/dev/null || true
 su postgres -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE tcepa TO tcepa;\"" 2>/dev/null || true
-
-# Executa schema
 su postgres -c "psql -d tcepa -f /app/init.sql" 2>/dev/null || true
 
-# Importa dados (se banco vazio)
-echo "Verificando dados..."
+echo "[5/6] Verificando dados..."
 HAS_DATA=$(su postgres -c "psql -d tcepa -t -c \"SELECT COUNT(*) FROM licitacoes;\"" 2>/dev/null | tr -d ' ' || echo "0")
 if [ "$HAS_DATA" = "0" ] || [ -z "$HAS_DATA" ]; then
   echo "Importando XMLs..."
   ls /app/xml/2026_*.xml 2>/dev/null && node /app/src/import-xml-pg.js "/app/xml/2026_*.xml" || echo "Nenhum XML encontrado"
+else
+  echo "Banco ja possui $HAS_DATA registros"
 fi
 
-# Inicia a API
-echo "Iniciando API..."
+echo "[6/6] Iniciando API..."
+echo "=== Container pronto! ==="
 exec node /app/src/index-pg.js
