@@ -5,6 +5,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
 const { getDatabase } = require('./database-pg');
 const { router: pesquisaRoutes } = require('./routes/pesquisa-pg');
 
@@ -18,6 +20,15 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Rotas da API
 app.use('/api/pesquisa', pesquisaRoutes);
+
+// Swagger
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'API TCE/PR - Pesquisa de Preços',
+}));
+
+// JSON do Swagger
+app.get('/api/swagger.json', (req, res) => res.json(swaggerSpec));
 
 // Rota de health check
 app.get('/api/health', async (req, res) => {
