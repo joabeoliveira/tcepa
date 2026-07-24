@@ -132,42 +132,6 @@ function criarTabelas() {
     CREATE INDEX IF NOT EXISTS idx_documento ON licitacoes(nr_documento);
   `);
 
-  // Índice FTS5 para busca textual
-  db.run(`
-    CREATE VIRTUAL TABLE IF NOT EXISTS licitacoes_fts USING fts5(
-      ds_item,
-      nm_municipio,
-      nm_pessoa,
-      nm_entidade,
-      content='licitacoes',
-      content_rowid='id',
-      tokenize='porter unicode61'
-    );
-  `);
-
-  // Triggers para manter o FTS sincronizado
-  db.run(`
-    CREATE TRIGGER IF NOT EXISTS licitacoes_ai AFTER INSERT ON licitacoes BEGIN
-      INSERT INTO licitacoes_fts(rowid, ds_item, nm_municipio, nm_pessoa, nm_entidade)
-      VALUES (new.id, new.ds_item, new.nm_municipio, new.nm_pessoa, new.nm_entidade);
-    END;
-  `);
-
-  db.run(`
-    CREATE TRIGGER IF NOT EXISTS licitacoes_ad AFTER DELETE ON licitacoes BEGIN
-      INSERT INTO licitacoes_fts(licitacoes_fts, rowid, ds_item, nm_municipio, nm_pessoa, nm_entidade)
-      VALUES ('delete', old.id, old.ds_item, old.nm_municipio, old.nm_pessoa, old.nm_entidade);
-    END;
-  `);
-
-  db.run(`
-    CREATE TRIGGER IF NOT EXISTS licitacoes_au AFTER UPDATE ON licitacoes BEGIN
-      INSERT INTO licitacoes_fts(licitacoes_fts, rowid, ds_item, nm_municipio, nm_pessoa, nm_entidade)
-      VALUES ('delete', old.id, old.ds_item, old.nm_municipio, old.nm_pessoa, old.nm_entidade);
-      INSERT INTO licitacoes_fts(rowid, ds_item, nm_municipio, nm_pessoa, nm_entidade)
-      VALUES (new.id, new.ds_item, new.nm_municipio, new.nm_pessoa, new.nm_entidade);
-    END;
-  `);
 }
 
 module.exports = { getDatabase, exec, get, run, salvar };
