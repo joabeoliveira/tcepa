@@ -19,3 +19,8 @@ Desktop.ini
 .idea/
 *.swp
 *.swo
+
+# API - Node.js
+api/node_modules/
+api/data/
+api/package-lock.json
