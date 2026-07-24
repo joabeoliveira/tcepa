@@ -11,7 +11,16 @@ let db = null;
  * O banco é mantido em memória e sincronizado com o arquivo em disco.
  */
 async function getDatabase() {
-  if (db) return db;
+  if (db) {
+    // DEBUG: verificar se o db em memória ainda tem dados
+    try {
+      const test = db.exec("SELECT COUNT(*) as c FROM licitacoes");
+      console.log(`[DB] Cache hit - registros: ${test?.[0]?.values?.[0]?.[0] ?? 'erro'}`);
+    } catch (e) {
+      console.log('[DB] Cache hit mas query falhou:', e.message);
+    }
+    return db;
+  }
 
   const dir = path.dirname(DB_PATH);
   if (!fs.existsSync(dir)) {
@@ -21,14 +30,33 @@ async function getDatabase() {
   const SQL = await initSqlJs();
 
   if (fs.existsSync(DB_PATH)) {
+    const stats = fs.statSync(DB_PATH);
+    console.log(`[DB] Arquivo encontrado: ${stats.size} bytes`);
     const buffer = fs.readFileSync(DB_PATH);
     db = new SQL.Database(buffer);
+    const test = db.exec("SELECT COUNT(*) as c FROM licitacoes");
+    console.log(`[DB] Após carregar arquivo - registros: ${test?.[0]?.values?.[0]?.[0] ?? 'erro'}`);
   } else {
+    console.log('[DB] Arquivo não encontrado, criando novo banco');
     db = new SQL.Database();
   }
 
-  criarTabelas();
+  try {
+    criarTabelas();
+    console.log('[DB] Tabelas criadas/verificadas com sucesso');
+  } catch (err) {
+    console.error('[DB] Erro ao criar tabelas:', err.message);
+  }
+
   salvar();
+
+  // DEBUG: verificar após salvar
+  try {
+    const test = db.exec("SELECT COUNT(*) as c FROM licitacoes");
+    console.log(`[DB] Após salvar - registros: ${test?.[0]?.values?.[0]?.[0] ?? 'erro'}`);
+  } catch (e) {
+    console.log('[DB] Erro na verificação pós-salvar:', e.message);
+  }
 
   return db;
 }
