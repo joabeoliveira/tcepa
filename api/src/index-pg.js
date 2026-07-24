@@ -31,6 +31,16 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 app.get('/api/swagger.json', (req, res) => res.json(swaggerSpec));
 
 // Rota de health check
+/**
+ * @swagger
+ * /api/health:
+ *   get:
+ *     tags: [Info]
+ *     summary: Health check da API
+ *     responses:
+ *       200:
+ *         description: API está online
+ */
 app.get('/api/health', async (req, res) => {
   try {
     await getDatabase();

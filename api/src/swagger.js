@@ -2,6 +2,7 @@
  * Configuração do Swagger/OpenAPI
  */
 const swaggerJsDoc = require('swagger-jsdoc');
+const path = require('path');
 
 const options = {
   definition: {
@@ -26,7 +27,7 @@ const options = {
       { name: 'Info', description: 'Informações e estatísticas' },
     ],
   },
-  apis: ['./src/routes/pesquisa-pg.js', './src/index-pg.js'],
+    apis: [path.join(__dirname, 'routes', 'pesquisa-pg.js'), path.join(__dirname, 'index-pg.js')],
 };
 
 const swaggerSpec = swaggerJsDoc(options);
