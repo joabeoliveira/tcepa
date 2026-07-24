@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+*.md
+.env
+.env.*
+api/node_modules/
+api/data/
+api/package-lock.json
+__pycache__/
+*.py[cod]
