@@ -37,6 +37,8 @@ echo "[4/6] Configurando database..."
 su postgres -c "psql -c \"SELECT 1 FROM pg_database WHERE datname='tcepa'\" | grep -q 1 || psql -c \"CREATE DATABASE tcepa;\"" 2>/dev/null || true
 su postgres -c "psql -c \"SELECT 1 FROM pg_roles WHERE rolname='tcepa'\" | grep -q 1 || psql -c \"CREATE USER tcepa WITH PASSWORD '$DB_PASSWORD';\"" 2>/dev/null || true
 su postgres -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE tcepa TO tcepa;\"" 2>/dev/null || true
+su postgres -c "psql -d tcepa -c \"GRANT ALL ON SCHEMA public TO tcepa;\"" 2>/dev/null || true
+su postgres -c "psql -d tcepa -c \"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO tcepa;\"" 2>/dev/null || true
 su postgres -c "psql -d tcepa -f /app/init.sql" 2>/dev/null || true
 
 echo "[5/6] Verificando dados..."

@@ -3,7 +3,7 @@
  * Usa busca textual com ILIKE + índice trigram para performance
  */
 const express = require('express');
-const { exec, get } = require('./database-pg');
+const { exec, get } = require('../database-pg');
 
 const router = express.Router();
 
