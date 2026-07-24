@@ -72,11 +72,23 @@ function get(sql, params = []) {
 }
 
 /**
- * Executa comandos DDL/DML sem retorno
+ * Executa comandos DDL/DML sem retorno (salva automaticamente)
  */
 function run(sql, params = []) {
   if (!db) throw new Error('Banco não inicializado.');
   db.run(sql, params);
+  salvar();
+}
+
+/**
+ * Executa comandos DDL/DML em lote sem salvar a cada iteração.
+ * Salva apenas no final. Use para importação em massa.
+ */
+function runBatch(queries) {
+  if (!db) throw new Error('Banco não inicializado.');
+  for (const [sql, params] of queries) {
+    db.run(sql, params || []);
+  }
   salvar();
 }
 
@@ -134,4 +146,4 @@ function criarTabelas() {
 
 }
 
-module.exports = { getDatabase, exec, get, run, salvar };
+module.exports = { getDatabase, exec, get, run, runBatch, salvar };

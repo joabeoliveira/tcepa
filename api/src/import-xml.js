@@ -9,7 +9,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { getDatabase, run } = require('./database');
+const { getDatabase, runBatch } = require('./database');
 
 // Mapeamento de atributos do XML -> colunas SQL
 const ATTR_MAP = {
@@ -146,7 +146,7 @@ function processarXML(filePath) {
 }
 
 /**
- * Insere registros no banco SQLite em lote
+ * Insere registros no banco SQLite em lote (salva 1x a cada 500 registros)
  */
 function inserirLote(records) {
   if (records.length === 0) return;
@@ -154,18 +154,28 @@ function inserirLote(records) {
   const placeholders = COLS.map(() => '?').join(', ');
   const sql = `INSERT OR IGNORE INTO licitacoes (${COLS.join(', ')}) VALUES (${placeholders})`;
 
-  // sql.js não tem transação preparada, então fazemos lote manual
   const BATCH = 500;
   for (let i = 0; i < records.length; i += BATCH) {
     const batch = records.slice(i, i + BATCH);
+    const queries = [];
+
     for (const rec of batch) {
       const values = COLS.map(col => rec[col] ?? null);
-      try {
-        run(sql, values);
-      } catch (err) {
-        // Ignora erros de duplicata
-        if (!err.message.includes('UNIQUE')) {
-          console.error(`  Erro ao inserir: ${err.message}`);
+      queries.push([sql, values]);
+    }
+
+    try {
+      runBatch(queries);
+    } catch (err) {
+      // Se der erro, tenta um por um para identificar
+      for (const rec of batch) {
+        const values = COLS.map(col => rec[col] ?? null);
+        try {
+          runBatch([[sql, values]]);
+        } catch (e) {
+          if (!e.message.includes('UNIQUE')) {
+            console.error(`  Erro ao inserir: ${e.message}`);
+          }
         }
       }
     }
