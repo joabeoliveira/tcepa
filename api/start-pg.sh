@@ -18,7 +18,9 @@ else
 fi
 
 echo "[2/6] Iniciando servico PostgreSQL..."
-su postgres -c "pg_ctl -D $PGDATA/pgdata -l /var/log/pg.log start" || { echo "ERRO: pg_ctl falhou"; exit 1; }
+# Remove pid file stale se houver (restart do container)
+rm -f "$PGDATA/pgdata/postmaster.pid" 2>/dev/null || true
+su postgres -c "pg_ctl -D $PGDATA/pgdata -l $PGDATA/pg.log start" || { echo "ERRO: pg_ctl falhou"; cat "$PGDATA/pg.log" 2>/dev/null; exit 1; }
 
 echo "[3/6] Aguardando PostgreSQL..."
 for i in $(seq 1 30); do
