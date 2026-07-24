@@ -40,6 +40,8 @@ su postgres -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE tcepa TO tcepa;\"" 2>
 su postgres -c "psql -d tcepa -c \"GRANT ALL ON SCHEMA public TO tcepa;\"" 2>/dev/null || true
 su postgres -c "psql -d tcepa -c \"ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO tcepa;\"" 2>/dev/null || true
 su postgres -c "psql -d tcepa -f /app/init.sql" 2>/dev/null || true
+su postgres -c "psql -d tcepa -c \"GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO tcepa;\"" 2>/dev/null || true
+su postgres -c "psql -d tcepa -c \"GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO tcepa;\"" 2>/dev/null || true
 
 echo "[5/6] Verificando dados..."
 HAS_DATA=$(su postgres -c "psql -d tcepa -t -c \"SELECT COUNT(*) FROM licitacoes;\"" 2>/dev/null | tr -d ' ' || echo "0")
