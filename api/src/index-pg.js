@@ -10,6 +10,7 @@ const swaggerSpec = require('./swagger');
 const authMiddleware = require('./middleware/auth');
 const { getDatabase } = require('./database-pg');
 const { router: pesquisaRoutes } = require('./routes/pesquisa-pg');
+const { router: notasRoutes } = require('./routes/notas-pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,6 +22,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Rotas da API (protegidas por API Key)
 app.use('/api/pesquisa', authMiddleware, pesquisaRoutes);
+app.use('/api/notas', authMiddleware, notasRoutes);
 
 // Swagger
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {

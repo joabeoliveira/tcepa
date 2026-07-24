@@ -1,0 +1,22 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instala dependências de sistema mínimas
+RUN apk add --no-cache bash
+
+# Copia package.json e instala dependências
+COPY api/package*.json ./
+RUN npm install --omit=dev
+
+# Copia código fonte
+COPY api/src/ ./src/
+
+# Usa usuário não-root por segurança
+RUN addgroup -S app && adduser -S app -G app
+USER app
+
+EXPOSE 3000
+
+# Entrada: inicia a API conectando ao serviço PostgreSQL (externo)
+CMD ["node", "src/index-pg.js"]
