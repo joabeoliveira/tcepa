@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pesquisa de Preços - TCE/PR</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1a1a2e; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+    header { background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 30px 0; text-align: center; }
+    header h1 { font-size: 24px; margin-bottom: 4px; }
+    header p { opacity: 0.7; font-size: 14px; }
+    .card { background: white; border-radius: 12px; padding: 24px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .search-box { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+    .search-box input, .search-box select { padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; transition: border .2s; }
+    .search-box input:focus, .search-box select:focus { border-color: #4361ee; }
+    .search-box input { flex: 2; min-width: 200px; }
+    .search-box select { flex: 1; min-width: 120px; }
+    .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s; }
+    .btn-primary { background: #4361ee; color: white; }
+    .btn-primary:hover { background: #3a56d4; }
+    .btn-link { background: none; color: #4361ee; padding: 8px 16px; }
+    .btn-link:hover { background: #f0f2ff; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .stat { text-align: center; padding: 16px; background: #f8f9ff; border-radius: 8px; }
+    .stat .value { font-size: 28px; font-weight: 700; color: #4361ee; }
+    .stat .label { font-size: 12px; color: #666; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #f8f9ff; padding: 12px; text-align: left; font-size: 12px; text-transform: uppercase; color: #666; border-bottom: 2px solid #e0e0e0; }
+    td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 13px; vertical-align: top; }
+    tr:hover td { background: #fafbff; }
+    .desc { max-width: 400px; word-break: break-word; }
+    .price { color: #2e7d32; font-weight: 700; white-space: nowrap; }
+    .loading { text-align: center; padding: 40px; color: #999; }
+    .loading::after { content: '...'; animation: dots 1.5s infinite; }
+    @keyframes dots { 0%, 20% { content: '.'; } 40% { content: '..'; } 60%, 100% { content: '...'; } }
+    .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
+    .pagination button { padding: 8px 16px; border: 1px solid #e0e0e0; border-radius: 6px; background: white; cursor: pointer; }
+    .pagination button.active { background: #4361ee; color: white; border-color: #4361ee; }
+    .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .empty { text-align: center; padding: 60px 20px; color: #999; }
+    .empty svg { display: block; margin: 0 auto 16px; opacity: 0.3; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+    .badge-green { background: #e8f5e9; color: #2e7d32; }
+    .badge-blue { background: #e3f2fd; color: #1565c0; }
+    #toast { position: fixed; bottom: 24px; right: 24px; background: #333; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s; z-index: 999; }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>🏷️ Pesquisa de Preços - TCE/PR</h1>
+      <p>Consulte valores de licitações públicas do Paraná</p>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Estatísticas -->
+    <div class="stats" id="stats"></div>
+
+    <!-- Busca -->
+    <div class="card">
+      <div class="search-box">
+        <input type="text" id="q" placeholder="Digite a descrição do item (ex: motobomba, cimento, bermuda...)" onkeydown="if(event.key==='Enter')buscar()" autofocus>
+        <select id="ordenar">
+          <option value="relevancia">Ordenar: Relevância</option>
+          <option value="preco">Menor Preço</option>
+          <option value="data">Mais Recente</option>
+        </select>
+        <select id="municipio">
+          <option value="">Todos os Municípios</option>
+        </select>
+        <button class="btn btn-primary" onclick="buscar()">🔍 Pesquisar</button>
+      </div>
+    </div>
+
+    <!-- Resultados -->
+    <div class="card" id="results">
+      <div class="empty">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#999" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <p>Digite um termo e clique em Pesquisar</p>
+      </div>
+    </div>
+
+    <!-- Paginação -->
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+  <div id="toast"></div>
+
+  <script>
+    const API = '/api/pesquisa';
+    let paginaAtual = 1;
+
+    async function init() {
+      await carregarMunicipios();
+      await carregarStats();
+    }
+
+    async function carregarStats() {
+      try {
+        const r = await fetch(API + '/estatisticas');
+        const d = await r.json();
+        document.getElementById('stats').innerHTML = `
+          <div class="stat"><div class="value">${d.dados.total_licitacoes || 0}</div><div class="label">Licitações</div></div>
+          <div class="stat"><div class="value">${d.dados.total_municipios || 0}</div><div class="label">Municípios</div></div>
+          <div class="stat"><div class="value">${d.dados.total_entidades || 0}</div><div class="label">Entidades</div></div>
+          <div class="stat"><div class="value">${d.dados.total_fornecedores || 0}</div><div class="label">Fornecedores</div></div>
+        `;
+      } catch(e) { /* offline */ }
+    }
+
+    async function carregarMunicipios() {
+      try {
+        const r = await fetch(API + '/municipios');
+        const d = await r.json();
+        const sel = document.getElementById('municipio');
+        d.dados.forEach(m => {
+          sel.innerHTML += `<option value="${m.nome}">${m.nome} (${m.total_licitacoes})</option>`;
+        });
+      } catch(e) { /* offline */ }
+    }
+
+    async function buscar(pagina = 1) {
+      paginaAtual = pagina;
+      const q = document.getElementById('q').value.trim();
+      if (!q) return toast('Digite um termo de busca');
+
+      const params = new URLSearchParams({
+        q, pagina, limite: 20,
+        ordenar: document.getElementById('ordenar').value,
+        municipio: document.getElementById('municipio').value
+      });
+
+      document.getElementById('results').innerHTML = '<div class="loading">Pesquisando</div>';
+      document.getElementById('pagination').innerHTML = '';
+
+      try {
+        const r = await fetch(API + '?' + params);
+        const d = await r.json();
+
+        if (!d.dados.length) {
+          document.getElementById('results').innerHTML = '<div class="empty"><p>Nenhum resultado encontrado</p></div>';
+          return;
+        }
+
+        document.getElementById('results').innerHTML = `
+          <table>
+            <thead><tr>
+              <th>Item</th><th>Município</th><th>Modalidade</th><th>Fornecedor</th><th>Qtde</th><th>Valor Unit.</th><th>Data</th>
+            </tr></thead>
+            <tbody>${d.dados.map(r => `
+              <tr>
+                <td class="desc">${r.item.descricao}</td>
+                <td>${r.municipio.nome} <span class="badge badge-blue">${r.municipio.codigo}</span></td>
+                <td>${r.licitacao.modalidade}</td>
+                <td>${r.fornecedor.nome}<br><small>${r.fornecedor.documento}</small></td>
+                <td>${r.item.quantidade} ${r.item.unidade_medida}</td>
+                <td class="price">R$ ${Number(r.valores.proposta_unitario || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}</td>
+                <td>${r.licitacao.data_homologacao || '-'}</td>
+              </tr>
+            `).join('')}</tbody>
+          </table>
+        `;
+
+        // Paginação
+        let pags = '';
+        for (let i = 1; i <= d.paginacao.total_paginas; i++) {
+          pags += `<button class="${i === pagina ? 'active' : ''}" ${i === pagina ? 'disabled' : ''} onclick="buscar(${i})">${i}</button>`;
+        }
+        document.getElementById('pagination').innerHTML = pags;
+
+        toast(`${d.paginacao.total} resultado(s) encontrado(s)`);
+      } catch(e) {
+        document.getElementById('results').innerHTML = '<div class="empty"><p>Erro ao consultar a API</p></div>';
+        toast('Erro: ' + e.message);
+      }
+    }
+
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    init();
+  </script>
+</body>
+</html>
