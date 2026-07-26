@@ -281,7 +281,7 @@ async function logJobFinish(client, id, payload) {
 }
 
 async function processFile(filePath) {
-  const fileHash = crypto.createHash('sha1').update(fs.readFileSync(filePath)).digest('hex');
+  const fileHash = await hashFile(filePath);
   const client = await pool.connect();
 
   try {
@@ -414,6 +414,16 @@ async function processFile(filePath) {
   } finally {
     client.release();
   }
+}
+
+function hashFile(filePath) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha1');
+    const stream = fs.createReadStream(filePath);
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('error', reject);
+    stream.on('end', () => resolve(hash.digest('hex')));
+  });
 }
 
 async function main() {

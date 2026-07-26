@@ -56,6 +56,20 @@
     .upload-actions { display: flex; gap: 10px; flex-wrap: wrap; }
     .btn-secondary { background: #eef2ff; color: #1d4ed8; }
     .btn-secondary:hover { background: #e0e7ff; }
+    .field { display: grid; gap: 6px; margin-top: 12px; }
+    .field label { font-size: 12px; font-weight: 700; color: #334155; }
+    .field input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; }
+    .jobs-list { display: grid; gap: 8px; max-height: 220px; overflow: auto; }
+    .job-item { border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; background: #fff; font-size: 12px; }
+    .job-item strong { display: block; margin-bottom: 4px; }
+    .job-item .muted { color: #64748b; }
+    .preview-box { display: grid; gap: 8px; margin-top: 12px; }
+    .preview-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .preview-table th, .preview-table td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: top; }
+    .preview-table th { background: #f8fafc; position: sticky; top: 0; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; }
+    .pill.ok { background: #dcfce7; color: #166534; }
+    .pill.warn { background: #fef3c7; color: #92400e; }
     #toast { position: fixed; bottom: 24px; right: 24px; background: #333; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s; z-index: 999; }
     #toast.show { opacity: 1; }
   </style>
@@ -80,6 +94,16 @@
             <button class="btn btn-primary" onclick="iniciarUpload()">Enviar e importar</button>
             <button class="btn btn-secondary" onclick="document.getElementById('csvFile').value = ''">Limpar</button>
           </div>
+          <div class="field">
+            <label for="apiKey">API Key do ambiente</label>
+            <input type="password" id="apiKey" placeholder="Opcional se o ambiente não exigir autenticação">
+          </div>
+          <div class="preview-box">
+            <strong>Preview do CSV</strong>
+            <div class="upload-status" id="previewStatus">Selecione um arquivo para validar o cabeçalho.</div>
+            <div id="previewPill"></div>
+            <div style="max-height: 240px; overflow: auto;" id="previewTableWrap"></div>
+          </div>
         </div>
         <div class="upload-meta">
           <div class="card" style="margin:0; padding:16px;">
@@ -94,6 +118,10 @@
           <div class="card" style="margin:0; padding:16px;">
             <strong>Resultado</strong>
             <div class="upload-status" id="uploadResult">Aguardando arquivo.</div>
+          </div>
+          <div class="card" style="margin:0; padding:16px;">
+            <strong>Últimos uploads</strong>
+            <div class="jobs-list" id="jobsList"><div class="upload-status">Nenhum upload ainda.</div></div>
           </div>
         </div>
       </div>
@@ -135,14 +163,18 @@
   <script>
     const API = '/api/pesquisa';
     const ETL_API = '/api/etl/notas/upload';
+    const ETL_PREVIEW_API = '/api/etl/notas/preview';
     const CHUNK_SIZE = 5 * 1024 * 1024;
     let paginaAtual = 1;
     let arquivoSelecionado = null;
+    let jobsTimer = null;
 
     async function init() {
       await carregarMunicipios();
       await carregarStats();
       setupDropzone();
+      loadSavedApiKey();
+      carregarJobs();
     }
 
     async function carregarStats() {
@@ -232,12 +264,31 @@
       setTimeout(() => t.classList.remove('show'), 3000);
     }
 
+    function loadSavedApiKey() {
+      const saved = localStorage.getItem('tcepa_api_key') || '';
+      document.getElementById('apiKey').value = saved;
+    }
+
+    function saveApiKey() {
+      localStorage.setItem('tcepa_api_key', document.getElementById('apiKey').value.trim());
+    }
+
+    function authHeaders() {
+      const key = document.getElementById('apiKey').value.trim();
+      if (!key) return {};
+      saveApiKey();
+      return { 'x-api-key': key };
+    }
+
     function setupDropzone() {
       const dz = document.getElementById('dropzone');
       const input = document.getElementById('csvFile');
       input.addEventListener('change', () => {
         arquivoSelecionado = input.files && input.files[0] ? input.files[0] : null;
-        if (arquivoSelecionado) toast(`Arquivo selecionado: ${arquivoSelecionado.name}`);
+        if (arquivoSelecionado) {
+          toast(`Arquivo selecionado: ${arquivoSelecionado.name}`);
+          carregarPreview(arquivoSelecionado);
+        }
       });
       dz.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -250,8 +301,49 @@
         if (e.dataTransfer.files && e.dataTransfer.files[0]) {
           arquivoSelecionado = e.dataTransfer.files[0];
           toast(`Arquivo selecionado: ${arquivoSelecionado.name}`);
+          carregarPreview(arquivoSelecionado);
         }
       });
+    }
+
+    async function carregarPreview(file) {
+      try {
+        document.getElementById('previewStatus').textContent = 'Validando cabeçalho e preparando preview...';
+        document.getElementById('previewPill').innerHTML = '';
+        document.getElementById('previewTableWrap').innerHTML = '';
+        const sample = file.slice(0, 1024 * 256);
+        const response = await fetch(ETL_PREVIEW_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream', ...authHeaders() },
+          body: await sample.arrayBuffer(),
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || 'Falha ao validar preview');
+        }
+        const data = await response.json();
+        const pillClass = data.validHeader ? 'ok' : 'warn';
+        const pillText = data.validHeader ? 'Cabeçalho válido' : 'Cabeçalho incompleto';
+        document.getElementById('previewPill').innerHTML = `<span class="pill ${pillClass}">${pillText}</span>`;
+        document.getElementById('previewStatus').textContent = data.validHeader
+          ? 'Cabeçalho validado com sucesso. Você já pode enviar o arquivo.'
+          : `Faltam colunas esperadas: ${data.missingHeaders.join(', ')}`;
+        const rows = data.preview || [];
+        if (rows.length) {
+          const columns = Array.from(new Set(rows.flatMap(row => Object.keys(row)))).slice(0, 10);
+          document.getElementById('previewTableWrap').innerHTML = `
+            <table class="preview-table">
+              <thead><tr>${columns.map(col => `<th>${col}</th>`).join('')}</tr></thead>
+              <tbody>${rows.map(row => `<tr>${columns.map(col => `<td>${row[col] ?? ''}</td>`).join('')}</tr>`).join('')}</tbody>
+            </table>
+          `;
+        } else {
+          document.getElementById('previewTableWrap').innerHTML = '<div class="upload-status">Sem linhas suficientes para preview.</div>';
+        }
+      } catch (err) {
+        document.getElementById('previewStatus').textContent = `Falha no preview: ${err.message}`;
+        document.getElementById('previewPill').innerHTML = '<span class="pill warn">Preview indisponível</span>';
+      }
     }
 
     function setUploadProgress(percent, status, result) {
@@ -278,7 +370,7 @@
         const chunk = file.slice(start, end);
         const response = await fetch(`${ETL_API}?uploadId=${encodeURIComponent(uploadId)}&filename=${encodeURIComponent(file.name)}&chunkIndex=${chunkIndex}&totalChunks=${totalChunks}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/octet-stream' },
+          headers: { 'Content-Type': 'application/octet-stream', ...authHeaders() },
           body: await chunk.arrayBuffer(),
         });
         if (!response.ok) {
@@ -291,30 +383,55 @@
 
       setUploadProgress(100, 'Upload concluído. A importação já foi disparada no servidor.', 'Aguardando processamento');
       monitorarUpload(uploadId);
+      carregarJobs();
     }
 
     async function monitorarUpload(uploadId) {
-      const timer = setInterval(async () => {
+      if (jobsTimer) clearInterval(jobsTimer);
+      jobsTimer = setInterval(async () => {
         try {
-          const r = await fetch(`${ETL_API}/${encodeURIComponent(uploadId)}`);
+          const r = await fetch(`${ETL_API}/${encodeURIComponent(uploadId)}`, { headers: authHeaders() });
           if (!r.ok) return;
           const job = await r.json();
           setUploadProgress(
-            job.status === 'success' ? 100 : document.getElementById('uploadBar').style.width || '100%',
+            job.status === 'success' ? 100 : (Number.parseFloat(document.getElementById('uploadBar').style.width) || 100),
             `Status: ${job.status}`,
             job.error ? job.error : (job.message || 'Processando')
           );
           if (job.status === 'success') {
-            clearInterval(timer);
+            clearInterval(jobsTimer);
             toast('Importação concluída');
             await carregarStats();
+            await carregarJobs();
+            document.getElementById('uploadResult').textContent = `Concluído: ${job.rowsInserted || 0} inseridas, ${job.rowsIgnored || 0} ignoradas, ${job.rowsFailed || 0} falhas.`;
           }
           if (job.status === 'failed') {
-            clearInterval(timer);
+            clearInterval(jobsTimer);
             toast('Falha na importação');
+            await carregarJobs();
           }
         } catch (_) {}
       }, 3000);
+    }
+
+    async function carregarJobs() {
+      try {
+        const r = await fetch('/api/etl/notas/uploads', { headers: authHeaders() });
+        if (!r.ok) return;
+        const d = await r.json();
+        const list = document.getElementById('jobsList');
+        if (!d.dados || d.dados.length === 0) {
+          list.innerHTML = '<div class="upload-status">Nenhum upload ainda.</div>';
+          return;
+        }
+        list.innerHTML = d.dados.map(job => `
+          <div class="job-item">
+            <strong>${job.fileName || 'arquivo.csv'}</strong>
+            <div class="muted">Status: ${job.status} | Lidas: ${job.rowsRead || job.rows_read || 0} | Inseridas: ${job.rowsInserted || job.rows_inserted || 0}</div>
+            <div class="muted">${job.message || job.error || ''}</div>
+          </div>
+        `).join('');
+      } catch (_) {}
     }
 
     init();

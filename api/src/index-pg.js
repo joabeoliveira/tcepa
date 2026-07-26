@@ -20,6 +20,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const uploadJobs = new Map();
 const uploadRoot = path.join(os.tmpdir(), 'tcepa-uploads');
+const MAX_JOB_HISTORY = 20;
+const EXPECTED_NOTE_HEADERS = [
+  'chNFe', 'nNF', 'serie', 'dEmi', 'dhEmi', 'cMunFG', 'cMun',
+  'xMun', 'CNPJ', 'CPF', 'descricao', 'xProd', 'qCom', 'vUnCom', 'vProd'
+];
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
@@ -51,10 +56,104 @@ function getJob(jobId) {
   return uploadJobs.get(jobId);
 }
 
+function touchJob(job) {
+  job.updatedAt = new Date().toISOString();
+}
+
+function trimJobs() {
+  if (uploadJobs.size <= MAX_JOB_HISTORY) return;
+  const ordered = [...uploadJobs.values()].sort((a, b) => {
+    const left = new Date(a.updatedAt || a.startedAt || 0).getTime();
+    const right = new Date(b.updatedAt || b.startedAt || 0).getTime();
+    return left - right;
+  });
+  while (ordered.length > MAX_JOB_HISTORY) {
+    const job = ordered.shift();
+    if (job) uploadJobs.delete(job.jobId);
+  }
+}
+
+function parseSummary(stdout) {
+  const lines = String(stdout || '').trim().split('\n').filter(Boolean);
+  const okLine = [...lines].reverse().find((line) => line.startsWith('[OK] '));
+  if (!okLine) return null;
+  const match = okLine.match(/lidas=(\d+), inseridas=(\d+), ignoradas=(\d+), falhas=(\d+)/);
+  if (!match) return null;
+  return {
+    rowsRead: Number(match[1]),
+    rowsInserted: Number(match[2]),
+    rowsIgnored: Number(match[3]),
+    rowsFailed: Number(match[4]),
+  };
+}
+
+function validatePreviewHeaders(headers) {
+  const normalized = headers.map((header) => String(header || '').trim()).filter(Boolean);
+  const missing = EXPECTED_NOTE_HEADERS.filter((header) => !normalized.includes(header));
+  const expectedMatch = normalized.some((header) => EXPECTED_NOTE_HEADERS.includes(header));
+  return {
+    valid: expectedMatch,
+    missing,
+    headers: normalized,
+  };
+}
+
+app.post('/api/etl/notas/preview', authMiddleware, express.raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
+  try {
+    if (!req.body || !req.body.length) {
+      return res.status(400).json({ erro: 'Conteúdo vazio' });
+    }
+
+    const sampleText = Buffer.from(req.body).toString('utf8');
+    const records = [];
+    const firstLine = sampleText.split(/\r?\n/).find((line) => line.trim().length > 0) || '';
+    const headers = firstLine.split(',').map((value) => value.replace(/^\uFEFF/, '').trim().replace(/^"|"$/g, ''));
+
+    await new Promise((resolve, reject) => {
+      const parser = parse({
+        columns: true,
+        skip_empty_lines: true,
+        bom: true,
+        relax_quotes: true,
+        relax_column_count: true,
+        trim: true,
+      });
+
+      parser.on('headers', (cols) => {
+        headers = cols || [];
+      });
+
+      parser.on('readable', () => {
+        let record;
+        while ((record = parser.read()) && records.length < 5) {
+          records.push(record);
+        }
+      });
+
+      parser.on('error', reject);
+      parser.on('end', resolve);
+      parser.write(sampleText);
+      parser.end();
+    });
+
+    const headerCheck = validatePreviewHeaders(headers);
+    res.json({
+      headers: headerCheck.headers,
+      validHeader: headerCheck.valid,
+      missingHeaders: headerCheck.missing,
+      preview: records,
+      totalPreviewRows: records.length,
+    });
+  } catch (err) {
+    res.status(500).json({ erro: 'Falha ao validar preview', detalhe: err.message });
+  }
+});
+
 function runImportForFile(job, filePath) {
   const scriptPath = path.join(__dirname, 'import-notas-fiscais-csv-pg.js');
   job.status = 'processing';
   job.startedAt = new Date().toISOString();
+  touchJob(job);
 
   const child = spawn(process.execPath, [scriptPath, filePath], {
     cwd: path.join(__dirname, '..'),
@@ -67,23 +166,33 @@ function runImportForFile(job, filePath) {
 
   child.stdout.on('data', (chunk) => {
     stdout += chunk.toString();
+    touchJob(job);
   });
 
   child.stderr.on('data', (chunk) => {
     stderr += chunk.toString();
+    touchJob(job);
   });
 
   child.on('close', (code) => {
     job.finishedAt = new Date().toISOString();
+    const summary = parseSummary(stdout);
     if (code === 0) {
       job.status = 'success';
       job.message = stdout.trim().split('\n').slice(-1)[0] || 'Importação concluída';
       job.error = null;
+      if (summary) {
+        job.rowsRead = summary.rowsRead;
+        job.rowsInserted = summary.rowsInserted;
+        job.rowsIgnored = summary.rowsIgnored;
+        job.rowsFailed = summary.rowsFailed;
+      }
     } else {
       job.status = 'failed';
       job.error = stderr.trim() || stdout.trim() || `Processo finalizado com código ${code}`;
       job.message = 'Falha na importação';
     }
+    touchJob(job);
     try {
       fs.unlinkSync(filePath);
     } catch (_) {}
@@ -125,9 +234,12 @@ app.post('/api/etl/notas/upload', authMiddleware, express.raw({ type: '*/*', lim
     }
 
     const chunkPath = path.join(job.tempDir, `${String(chunkIndex).padStart(6, '0')}.part`);
-    fs.writeFileSync(chunkPath, Buffer.from(req.body));
+    if (!fs.existsSync(chunkPath)) {
+      fs.writeFileSync(chunkPath, Buffer.from(req.body));
+    }
     job.receivedChunks.add(chunkIndex);
     job.totalChunks = totalChunks;
+    touchJob(job);
 
     const receivedAll = job.receivedChunks.size === totalChunks;
     if (receivedAll) {
@@ -143,6 +255,7 @@ app.post('/api/etl/notas/upload', authMiddleware, express.raw({ type: '*/*', lim
     } else {
       job.status = 'uploading';
     }
+    trimJobs();
 
     res.json({
       uploadId,
@@ -164,6 +277,13 @@ app.get('/api/etl/notas/upload/:uploadId', authMiddleware, (req, res) => {
     return res.status(404).json({ erro: 'Upload não encontrado' });
   }
   res.json(job);
+});
+
+app.get('/api/etl/notas/uploads', authMiddleware, (req, res) => {
+  const jobs = [...uploadJobs.values()]
+    .sort((a, b) => new Date(b.updatedAt || b.startedAt || 0) - new Date(a.updatedAt || a.startedAt || 0))
+    .slice(0, MAX_JOB_HISTORY);
+  res.json({ dados: jobs });
 });
 
 // Swagger
