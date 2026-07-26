@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>gptgov API — APIs de Dados Públicos para GovTech</title>
+  <meta name="description" content="Acesse licitações, notas fiscais e indicadores oficiais via API. Integração rápida, segurança e SLA empresarial." />
+  <meta name="theme-color" content="#0B5FFF" />
+  <link rel="canonical" href="https://api.gptgov.com.br/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="gptgov API — APIs de Dados Públicos para GovTech" />
+  <meta property="og:description" content="Acesse licitações, notas fiscais e indicadores oficiais via API. Integração rápida, segurança e SLA empresarial." />
+  <meta property="og:image" content="assets/illustrations/hero-dataflow.svg" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="gptgov API — APIs de Dados Públicos para GovTech" />
+  <meta name="twitter:description" content="Licitações, notas fiscais e indicadores prontos para integrar — escala, segurança e compliance." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml" />
+</head>
+<body>
+  <!-- Header -->
+  <header class="header" id="header">
+    <div class="header__inner">
+      <a class="logo" href="#topo" aria-label="gptgov API — início">
+        <img src="assets/logo.svg" alt="gptgov API" width="160" height="36" />
+      </a>
+
+      <nav class="nav" id="nav" aria-label="Principal">
+        <a href="#produto">Produto</a>
+        <a href="#planos">Planos</a>
+        <a href="#docs">Documentação</a>
+        <a href="#precos">Preços</a>
+        <a href="#seguranca">Segurança</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+
+      <div class="header__actions">
+        <a class="btn btn--ghost btn--sm" href="#entrar">Entrar</a>
+        <button class="btn btn--primary btn--sm" type="button" data-open-modal="signup">Teste grátis</button>
+      </div>
+
+      <button class="nav-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="nav" id="navToggle">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main id="topo">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container hero__grid">
+        <div>
+          <p class="section__eyebrow">Dados públicos como produto</p>
+          <h1>APIs confiáveis de dados públicos para produtos e decisões govtech</h1>
+          <p class="hero__sub">Licitações, notas fiscais e indicadores prontos para integrar — escala, segurança e compliance.</p>
+          <div class="hero__bullets" aria-label="Destaques">
+            <span class="chip">Dados normalizados</span>
+            <span class="chip">Busca por texto</span>
+            <span class="chip">Atualização semanal</span>
+            <span class="chip">SSL e LGPD</span>
+          </div>
+          <div class="hero__ctas">
+            <button class="btn btn--primary" type="button" data-open-modal="signup">Testar grátis 14 dias</button>
+            <button class="btn btn--secondary" type="button" data-open-modal="demo">Pedir demo</button>
+          </div>
+          <div class="trust-line">
+            <p>Confiado por órgãos públicos e fornecedores</p>
+            <div class="logo-row" aria-label="Clientes (placeholders)">
+              <span class="logo-placeholder">Prefeitura A</span>
+              <span class="logo-placeholder">Secretaria B</span>
+              <span class="logo-placeholder">Fornecedor C</span>
+              <span class="logo-placeholder">Startup D</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero__visual">
+          <img
+            src="assets/illustrations/hero-dataflow.svg"
+            alt="Mapa do Brasil com pontos de dados de licitações e notas fiscais."
+            width="520"
+            height="360"
+            fetchpriority="high"
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Problema / Solução -->
+    <section class="section section--alt" id="produto">
+      <div class="container">
+        <div class="section__header">
+          <p class="section__eyebrow">Problema · Solução</p>
+          <h2 class="section__title">Do caos de dados públicos à integração em minutos</h2>
+          <p class="section__lead">Gestores, integradores e fornecedores enfrentam as mesmas barreiras. A gptgov API resolve na origem.</p>
+        </div>
+        <div class="grid-3">
+          <article class="card problem-card">
+            <p class="label label--problem">Problema</p>
+            <strong>Dados dispersos e inconsistentes</strong>
+            <p>XMLs, portais e planilhas sem padrão — pesquisa de preços vira trabalho manual.</p>
+            <p class="label label--solution">Solução</p>
+            <strong>APIs normalizadas e atualizadas</strong>
+            <p>Schema único, atualização semanal e campos prontos para consulta e analytics.</p>
+          </article>
+          <article class="card problem-card">
+            <p class="label label--problem">Problema</p>
+            <strong>Demora na integração</strong>
+            <p>Sem docs claros, cada time reimplementa parsers e filtros do zero.</p>
+            <p class="label label--solution">Solução</p>
+            <strong>SDKs, exemplos e suporte</strong>
+            <p>REST + curl, Python e JS. Console de testes e onboarding guiado.</p>
+          </article>
+          <article class="card problem-card">
+            <p class="label label--problem">Problema</p>
+            <strong>Compliance e segurança</strong>
+            <p>Risco de LGPD, chaves expostas e falta de trilha de auditoria.</p>
+            <p class="label label--solution">Solução</p>
+            <strong>LGPD-ready, auditoria e criptografia</strong>
+            <p>TLS, gestão de API Keys, logs e retenção configurável por plano.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recursos -->
+    <section class="section" id="docs">
+      <div class="container">
+        <div class="section__header">
+          <p class="section__eyebrow">Recursos</p>
+          <h2 class="section__title">Tudo que você precisa para pesquisar e integrar</h2>
+          <p class="section__lead">Endpoints pensados para pesquisa de preços, dashboards e produtos govtech.</p>
+        </div>
+        <div class="grid-4">
+          <article class="card">
+            <div class="card__icon"><img src="assets/icons/api.svg" alt="" width="32" height="32" /></div>
+            <h3>Endpoints prontos</h3>
+            <p>Busca textual e filtros por município, ano, fornecedor e modalidade.</p>
+          </article>
+          <article class="card">
+            <div class="card__icon"><img src="assets/icons/search.svg" alt="" width="32" height="32" /></div>
+            <h3>Indexação FTS / trigram</h3>
+            <p>Resultados relevantes mesmo com variações de descrição de itens.</p>
+          </article>
+          <article class="card">
+            <div class="card__icon"><img src="assets/icons/integration.svg" alt="" width="32" height="32" /></div>
+            <h3>Integração simples</h3>
+            <p>REST + exemplos em curl, Python e JavaScript. OpenAPI disponível.</p>
+          </article>
+          <article class="card">
+            <div class="card__icon"><img src="assets/icons/sla.svg" alt="" width="32" height="32" /></div>
+            <h3>SLA &amp; observabilidade</h3>
+            <p>Rate-limits configuráveis, logs, métricas e status page.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Live demo -->
+    <section class="section section--alt" id="demo">
+      <div class="container">
+        <div class="section__header">
+          <p class="section__eyebrow">Live demo</p>
+          <h2 class="section__title">Simule uma consulta agora</h2>
+          <p class="section__lead">Escolha um termo ou digite o seu. Veja a resposta JSON no formato da API.</p>
+        </div>
+        <div class="demo">
+          <div>
+            <label class="sr-only" for="demoQuery">Termo de busca</label>
+            <div class="demo__search">
+              <input id="demoQuery" type="search" placeholder="Ex.: cimento, motobomba, notebook..." value="cimento" autocomplete="off" />
+              <button class="btn btn--primary" type="button" id="demoRun">Buscar</button>
+            </div>
+            <div class="suggestions" id="demoSuggestions" role="listbox" aria-label="Sugestões">
+              <button type="button" data-q="cimento" class="is-active">cimento</button>
+              <button type="button" data-q="motobomba">motobomba</button>
+              <button type="button" data-q="camiseta">camiseta</button>
+              <button type="button" data-q="notebook">notebook</button>
+            </div>
+            <p style="font-size:0.875rem;margin:0;">
+              Endpoint real (com sua API Key):
+            </p>
+            <div class="code-block" style="margin-top:0.75rem;">
+              <div class="code-block__header">
+                <span>curl</span>
+                <button type="button" class="copy-btn" data-copy="curl -H &quot;x-api-key: SUA_API_KEY&quot; &quot;https://api.seudominio.com/api/pesquisa?q=cimento&amp;limite=5&quot;">Copiar</button>
+              </div>
+<pre id="demoCurl">curl -H "x-api-key: SUA_API_KEY" \
+  "https://api.seudominio.com/api/pesquisa?q=cimento&amp;limite=5"</pre>
+            </div>
+          </div>
+          <div>
+            <div class="code-block" style="min-height:280px;">
+              <div class="code-block__header">
+                <span>JSON response</span>
+                <button type="button" class="copy-btn" id="copyJson">Copiar</button>
+              </div>
+              <pre id="demoJson" aria-live="polite"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Planos -->
+    <section class="section" id="planos">
+      <div class="container" id="precos">
+        <div class="section__header" style="text-align:center;margin-inline:auto;">
+          <p class="section__eyebrow">Planos e preços</p>
+          <h2 class="section__title" style="max-width:none;">Escale do protótipo à operação</h2>
+          <p class="section__lead" style="margin-inline:auto;">Limites mensais, suporte e SLA variam por plano. Atualize a qualquer momento.</p>
+          <span class="badge badge--accent">14 dias grátis no Starter</span>
+        </div>
+        <div class="pricing-grid">
+          <article class="price-card">
+            <span class="badge badge--accent">Free</span>
+            <h3>Free</h3>
+            <p class="price">R$ 0 <span>/mês</span></p>
+            <p class="price-note">Para explorar a API</p>
+            <ul>
+              <li>1.000 req/mês</li>
+              <li>Limite 1 req/s</li>
+              <li>Documentação completa</li>
+              <li>Suporte via comunidade</li>
+            </ul>
+            <button class="btn btn--secondary btn--block" type="button" data-open-modal="signup" data-plan="Free">Assinar</button>
+          </article>
+          <article class="price-card price-card--featured">
+            <span class="badge badge--primary">Mais popular</span>
+            <span class="badge badge--accent">Starter</span>
+            <h3>Starter</h3>
+            <p class="price">R$ 297 <span>/mês</span></p>
+            <p class="price-note">14 dias grátis · sem cartão opcional</p>
+            <ul>
+              <li>50.000 req/mês</li>
+              <li>10 req/s</li>
+              <li>Tokens de API</li>
+              <li>Suporte por e-mail</li>
+              <li>Logs 7 dias</li>
+            </ul>
+            <button class="btn btn--primary btn--block" type="button" data-open-modal="signup" data-plan="Starter">Assinar</button>
+          </article>
+          <article class="price-card">
+            <span class="badge badge--accent">Professional</span>
+            <h3>Professional</h3>
+            <p class="price">R$ 997 <span>/mês</span></p>
+            <p class="price-note">Para times em produção</p>
+            <ul>
+              <li>500.000 req/mês</li>
+              <li>50 req/s</li>
+              <li>SLA 99,9%</li>
+              <li>Logs 90 dias</li>
+              <li>1 onboarding de integração</li>
+            </ul>
+            <button class="btn btn--secondary btn--block" type="button" data-open-modal="signup" data-plan="Professional">Assinar</button>
+          </article>
+          <article class="price-card">
+            <span class="badge badge--accent">Enterprise</span>
+            <h3>Enterprise</h3>
+            <p class="price">Custom <span></span></p>
+            <p class="price-note">Volume, SSO e contrato</p>
+            <ul>
+              <li>Volume personalizado</li>
+              <li>Instância dedicada</li>
+              <li>SSO / SAML</li>
+              <li>Suporte 24/7</li>
+              <li>Contrato e NF-e</li>
+            </ul>
+            <button class="btn btn--secondary btn--block" type="button" data-open-modal="demo" data-plan="Enterprise">Pedir proposta</button>
+          </article>
+        </div>
+        <p class="pricing-note">Cancelamento 100% simples · Pagamentos via Stripe (recorrente) + faturas Enterprise</p>
+      </div>
+    </section>
+
+    <!-- Onboarding -->
+    <section class="section section--alt">
+      <div class="container">
+        <div class="section__header">
+          <p class="section__eyebrow">Onboarding</p>
+          <h2 class="section__title">Do zero à integração em 3 passos</h2>
+        </div>
+        <div class="steps">
+          <article class="step">
+            <h3>Criar conta e gerar API Key</h3>
+            <p>Cadastro em minutos. Gere tokens com escopo e revogue quando quiser.</p>
+          </article>
+          <article class="step">
+            <h3>Testar endpoints no console</h3>
+            <p>Explore pesquisa, filtros e paginação com exemplos prontos e OpenAPI.</p>
+          </article>
+          <article class="step">
+            <h3>Integrar e monitorar</h3>
+            <p>Dashboard de uso, rate-limits e alertas. Pronto para produção com SLA.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Segurança -->
+    <section class="section" id="seguranca">
+      <div class="container">
+        <div class="section__header">
+          <p class="section__eyebrow">Segurança &amp; Compliance</p>
+          <h2 class="section__title">Construído para o setor público e fornecedores</h2>
+          <p class="section__lead">Minimização de dados, criptografia e trilha de auditoria — sem atalhos.</p>
+        </div>
+        <div class="security-grid">
+          <article class="security-card">
+            <div class="card__icon"><img src="assets/icons/security.svg" alt="" width="32" height="32" /></div>
+            <h3>LGPD</h3>
+            <p>Minimização, mascaramento de PII quando aplicável, logs e política de retenção documentada.</p>
+          </article>
+          <article class="security-card">
+            <div class="card__icon"><img src="assets/icons/docs.svg" alt="" width="32" height="32" /></div>
+            <h3>Criptografia &amp; chaves</h3>
+            <p>TLS em trânsito, gestão de API Keys, rotação e isolamento por tenant.</p>
+          </article>
+          <article class="security-card">
+            <div class="card__icon"><img src="assets/icons/support.svg" alt="" width="32" height="32" /></div>
+            <h3>Auditoria &amp; pentest</h3>
+            <p>Revisões de segurança, certificados e políticas públicas de privacidade e termos.</p>
+          </article>
+        </div>
+        <div class="trust-badges" aria-label="Selos de confiança">
+          <span>TLS 1.2+</span>
+          <span>LGPD-ready</span>
+          <span>GDPR compatible</span>
+          <span>SLA 99,9%</span>
+          <span>Sentry + Prometheus</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Casos de uso -->
+    <section class="section section--alt">
+      <div class="container">
+        <div class="section__header">
+          <p class="section__eyebrow">Casos de uso</p>
+          <h2 class="section__title">Onde a gptgov API gera valor</h2>
+        </div>
+        <div class="grid-3">
+          <article class="use-card">
+            <h3>Dashboard de compras municipais</h3>
+            <p class="metric">−30% <span>tempo de cotação (ex.: Prefeitura X)</span></p>
+            <p>Consolide preços homologados por item e município para decisões de contratação.</p>
+          </article>
+          <article class="use-card">
+            <h3>Pesquisa de preços para fornecedores</h3>
+            <p class="metric">minutos <span>para achar referências oficiais</span></p>
+            <p>Equipes comerciais validam valores de mercado com dados de licitações vencedoras.</p>
+          </article>
+          <article class="use-card">
+            <h3>Monitoramento de despesas</h3>
+            <p class="metric">1 API <span>licitações + notas fiscais</span></p>
+            <p>Cruze itens licitados e NFe para auditoria, compliance e indicadores.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Testemunhos -->
+    <section class="section">
+      <div class="container">
+        <div class="section__header">
+          <p class="section__eyebrow">Clientes</p>
+          <h2 class="section__title">Quem integra, recomenda</h2>
+        </div>
+        <div class="testimonials">
+          <blockquote class="quote">
+            <p>“Substituímos planilhas e scrapers por uma API estável. A busca por item é o diferencial para pesquisa de preços.”</p>
+            <footer>
+              <div class="avatar" aria-hidden="true">MR</div>
+              <div>
+                <strong>Marina R.</strong>
+                <span>CTO · startup govtech</span>
+              </div>
+            </footer>
+          </blockquote>
+          <blockquote class="quote">
+            <p>“Onboarding em menos de um dia. Documentação clara e suporte que entende o domínio de licitações.”</p>
+            <footer>
+              <div class="avatar" aria-hidden="true">CS</div>
+              <div>
+                <strong>Carlos S.</strong>
+                <span>Analista de compras · município</span>
+              </div>
+            </footer>
+          </blockquote>
+          <blockquote class="quote">
+            <p>“Precisávamos de SLA e logs para o contrato. O plano Professional atendeu compliance e operação.”</p>
+            <footer>
+              <div class="avatar" aria-hidden="true">AL</div>
+              <div>
+                <strong>Ana L.</strong>
+                <span>Head de produto · fornecedor</span>
+              </div>
+            </footer>
+          </blockquote>
+        </div>
+        <div class="logo-row" style="margin-top:2rem;justify-content:center;" aria-label="Logos de clientes (placeholders)">
+          <span class="logo-placeholder">Cliente 01</span>
+          <span class="logo-placeholder">Cliente 02</span>
+          <span class="logo-placeholder">Cliente 03</span>
+          <span class="logo-placeholder">Cliente 04</span>
+          <span class="logo-placeholder">Cliente 05</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section section--alt" id="faq">
+      <div class="container">
+        <div class="section__header" style="text-align:center;margin-inline:auto;">
+          <p class="section__eyebrow">FAQ</p>
+          <h2 class="section__title" style="max-width:none;">Perguntas frequentes</h2>
+        </div>
+        <div class="faq">
+          <details>
+            <summary>Quais dados estão disponíveis?</summary>
+            <p>Licitações vencedoras (TCE/PR e expansão planejada), itens homologados, valores, fornecedores, municípios e, nos planos elegíveis, itens de notas fiscais. Consulte a documentação OpenAPI para o catálogo atual.</p>
+          </details>
+          <details>
+            <summary>Como funciona a autenticação?</summary>
+            <p>Via header <code>x-api-key</code>. Você gera e revoga keys no painel. Planos Enterprise podem usar SSO.</p>
+          </details>
+          <details>
+            <summary>Há trial sem cartão?</summary>
+            <p>Sim: 14 dias no Starter. O plano Free permanece disponível com limites reduzidos após o trial.</p>
+          </details>
+          <details>
+            <summary>Os dados pessoais (CPF/CNPJ) estão em conformidade com a LGPD?</summary>
+            <p>Trabalhamos com dados de fontes oficiais, minimização e opções de mascaramento quando aplicável. Políticas de retenção e privacidade estão publicadas. Avalie o enquadramento legal do seu caso de uso.</p>
+          </details>
+          <details>
+            <summary>Qual o SLA e o que acontece em incidente?</summary>
+            <p>Professional e Enterprise incluem SLA 99,9%, status page e canais de suporte. Enterprise: 24/7 e instância dedicada sob contrato.</p>
+          </details>
+          <details>
+            <summary>Posso integrar com meu ERP / BI?</summary>
+            <p>Sim. A API REST retorna JSON paginado. Exemplos em Python e JS estão na documentação; times Enterprise recebem onboarding assistido.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA final -->
+    <section class="section">
+      <div class="container">
+        <div class="cta-band">
+          <h2>Pronto para integrar dados públicos com confiança?</h2>
+          <p>Teste grátis por 14 dias. Cancele quando quiser. Documentação, exemplos e suporte para ir do protótipo à produção.</p>
+          <div class="cta-band__actions">
+            <button class="btn btn--primary" type="button" data-open-modal="signup">Testar grátis 14 dias</button>
+            <button class="btn btn--secondary" type="button" data-open-modal="demo">Pedir demo</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer" id="entrar">
+    <div class="container">
+      <div class="footer__grid">
+        <div>
+          <a class="logo" href="#topo" style="margin-bottom:1rem;">
+            <img src="assets/logo-white.svg" alt="gptgov API" width="160" height="36" />
+          </a>
+          <p>APIs de dados públicos para govtech: licitações, notas fiscais e indicadores com segurança e SLA.</p>
+          <p style="margin-top:1rem;">contato@gptgov.com.br</p>
+        </div>
+        <div>
+          <h4>Produto</h4>
+          <ul>
+            <li><a href="#produto">Recursos</a></li>
+            <li><a href="#planos">Planos</a></li>
+            <li><a href="#demo">Demo</a></li>
+            <li><a href="#docs">Documentação</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Empresa</h4>
+          <ul>
+            <li><a href="#seguranca">Segurança</a></li>
+            <li><a href="#">Status</a></li>
+            <li><a href="#">Blog</a></li>
+            <li><a href="#">Contato</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <ul>
+            <li><a href="#">Termos de uso</a></li>
+            <li><a href="#">Política de Privacidade</a></li>
+            <li><a href="#">LGPD</a></li>
+            <li><a href="#">Cookies</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <span>© <span id="year"></span> gptgov API. Todos os direitos reservados.</span>
+        <span>TLS · LGPD-ready · SLA empresarial</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal Signup -->
+  <div class="modal" id="modal-signup" role="dialog" aria-modal="true" aria-labelledby="signupTitle" hidden>
+    <div class="modal__backdrop" data-close-modal></div>
+    <div class="modal__dialog">
+      <button class="modal__close" type="button" data-close-modal aria-label="Fechar">×</button>
+      <div id="signupFormWrap">
+        <h2 id="signupTitle">Testar grátis 14 dias</h2>
+        <p>Crie sua conta e receba a API Key por e-mail. Sem compromisso.</p>
+        <form id="signupForm" novalidate>
+          <div class="form-group">
+            <label for="signupName">Nome completo</label>
+            <input id="signupName" name="name" type="text" required autocomplete="name" />
+          </div>
+          <div class="form-group">
+            <label for="signupEmail">E-mail corporativo</label>
+            <input id="signupEmail" name="email" type="email" required autocomplete="email" />
+          </div>
+          <div class="form-group">
+            <label for="signupOrg">Órgão / empresa</label>
+            <input id="signupOrg" name="org" type="text" required autocomplete="organization" />
+          </div>
+          <div class="form-group">
+            <label for="signupPlan">Plano</label>
+            <select id="signupPlan" name="plan">
+              <option value="Free">Free</option>
+              <option value="Starter" selected>Starter (14 dias grátis)</option>
+              <option value="Professional">Professional</option>
+            </select>
+          </div>
+          <label class="form-check">
+            <input type="checkbox" name="consent" required />
+            <span>Concordo com a <a href="#" target="_blank" rel="noopener">Política de Privacidade</a> e os <a href="#" target="_blank" rel="noopener">Termos</a> (LGPD). Autorizo o contato comercial.</span>
+          </label>
+          <button class="btn btn--primary btn--block" type="submit">Criar conta grátis</button>
+        </form>
+      </div>
+      <div class="form-success" id="signupSuccess">
+        <div class="check" aria-hidden="true">✓</div>
+        <h2>Conta solicitada</h2>
+        <p>Em produção, este formulário enviaria o lead ao backend/CRM. Por enquanto é um protótipo front-end.</p>
+        <button class="btn btn--primary" type="button" data-close-modal>Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Demo -->
+  <div class="modal" id="modal-demo" role="dialog" aria-modal="true" aria-labelledby="demoTitle" hidden>
+    <div class="modal__backdrop" data-close-modal></div>
+    <div class="modal__dialog">
+      <button class="modal__close" type="button" data-close-modal aria-label="Fechar">×</button>
+      <div id="demoFormWrap">
+        <h2 id="demoTitle">Solicitar demo</h2>
+        <p>Conte um pouco sobre o caso de uso. Retornamos em até 1 dia útil.</p>
+        <form id="demoForm" novalidate>
+          <div class="form-group">
+            <label for="demoName">Nome</label>
+            <input id="demoName" name="name" type="text" required autocomplete="name" />
+          </div>
+          <div class="form-group">
+            <label for="demoEmail">E-mail</label>
+            <input id="demoEmail" name="email" type="email" required autocomplete="email" />
+          </div>
+          <div class="form-group">
+            <label for="demoMsg">Caso de uso</label>
+            <textarea id="demoMsg" name="message" required placeholder="Ex.: pesquisa de preços para prefeitura, integração com ERP..."></textarea>
+          </div>
+          <label class="form-check">
+            <input type="checkbox" name="consent" required />
+            <span>Autorizo o tratamento dos dados para contato comercial, conforme a <a href="#">Política de Privacidade</a>.</span>
+          </label>
+          <button class="btn btn--primary btn--block" type="submit">Enviar solicitação</button>
+        </form>
+      </div>
+      <div class="form-success" id="demoSuccess">
+        <div class="check" aria-hidden="true">✓</div>
+        <h2>Solicitação enviada</h2>
+        <p>Protótipo front-end: em produção, dispare webhook/CRM e e-mail de confirmação.</p>
+        <button class="btn btn--primary" type="button" data-close-modal>Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cookie / LGPD -->
+  <div class="cookie" id="cookieBanner" role="dialog" aria-label="Consentimento de cookies" aria-live="polite">
+    <p>Usamos cookies essenciais e, com seu consentimento, analytics (ex.: Plausible) para melhorar o site. Veja a <a href="#">Política de Privacidade</a>.</p>
+    <div class="cookie__actions">
+      <button class="btn btn--primary btn--sm" type="button" id="cookieAccept">Aceitar</button>
+      <button class="btn btn--secondary btn--sm" type="button" id="cookieReject">Só essenciais</button>
+    </div>
+  </div>
+
+  <script src="js/main.js" defer></script>
+</body>
+</html>
