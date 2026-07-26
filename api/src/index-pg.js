@@ -100,13 +100,23 @@ function validatePreviewHeaders(headers) {
   };
 }
 
+function decodeSampleBuffer(buffer) {
+  const encodings = ['utf-8', 'windows-1252', 'latin1'];
+  for (const encoding of encodings) {
+    try {
+      return new TextDecoder(encoding, { fatal: false }).decode(buffer);
+    } catch (_) {}
+  }
+  return Buffer.from(buffer).toString('utf8');
+}
+
 app.post('/api/etl/notas/preview', authMiddleware, express.raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
   try {
     if (!req.body || !req.body.length) {
       return res.status(400).json({ erro: 'Conteúdo vazio' });
     }
 
-    const sampleText = Buffer.from(req.body).toString('utf8');
+    const sampleText = decodeSampleBuffer(Buffer.from(req.body));
     const records = [];
     const firstLine = sampleText.split(/\r?\n/).find((line) => line.trim().length > 0) || '';
     const headers = firstLine.split(',').map((value) => value.replace(/^\uFEFF/, '').trim().replace(/^"|"$/g, ''));

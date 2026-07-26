@@ -311,7 +311,7 @@
         document.getElementById('previewStatus').textContent = 'Validando cabeçalho e preparando preview...';
         document.getElementById('previewPill').innerHTML = '';
         document.getElementById('previewTableWrap').innerHTML = '';
-        const sample = file.slice(0, 1024 * 256);
+        const sample = file.slice(0, 1024 * 64);
         const response = await fetch(ETL_PREVIEW_API, {
           method: 'POST',
           headers: { 'Content-Type': 'application/octet-stream', ...authHeaders() },
