@@ -119,10 +119,6 @@ app.post('/api/etl/notas/preview', authMiddleware, express.raw({ type: '*/*', li
         trim: true,
       });
 
-      parser.on('headers', (cols) => {
-        headers = cols || [];
-      });
-
       parser.on('readable', () => {
         let record;
         while ((record = parser.read()) && records.length < 5) {

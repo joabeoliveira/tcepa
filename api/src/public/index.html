@@ -179,7 +179,7 @@
 
     async function carregarStats() {
       try {
-        const r = await fetch(API + '/estatisticas');
+        const r = await fetch(API + '/estatisticas', { headers: authHeaders() });
         const d = await r.json();
         document.getElementById('stats').innerHTML = `
           <div class="stat"><div class="value">${d.dados.total_licitacoes || 0}</div><div class="label">Licitações</div></div>
@@ -192,7 +192,7 @@
 
     async function carregarMunicipios() {
       try {
-        const r = await fetch(API + '/municipios');
+        const r = await fetch(API + '/municipios', { headers: authHeaders() });
         const d = await r.json();
         const sel = document.getElementById('municipio');
         d.dados.forEach(m => {

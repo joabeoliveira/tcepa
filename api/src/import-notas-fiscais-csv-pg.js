@@ -26,8 +26,6 @@ const BATCH_SIZE = parseInt(process.env.IMPORT_BATCH_SIZE || '1000', 10);
 
 async function ensureSchema() {
   await pool.query(`
-    CREATE EXTENSION IF NOT EXISTS pg_trgm;
-
     CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
       id BIGSERIAL PRIMARY KEY,
       source_hash TEXT NOT NULL UNIQUE,
@@ -51,7 +49,7 @@ async function ensureSchema() {
     CREATE INDEX IF NOT EXISTS idx_${TABLE_NAME}_municipio ON ${TABLE_NAME} (cd_ibge, municipio);
     CREATE INDEX IF NOT EXISTS idx_${TABLE_NAME}_cnpj ON ${TABLE_NAME} (cnpj_emitente);
     CREATE INDEX IF NOT EXISTS idx_${TABLE_NAME}_data_emissao ON ${TABLE_NAME} (data_emissao);
-    CREATE INDEX IF NOT EXISTS idx_${TABLE_NAME}_descricao_trgm ON ${TABLE_NAME} USING gin (descricao gin_trgm_ops);
+    CREATE INDEX IF NOT EXISTS idx_${TABLE_NAME}_descricao ON ${TABLE_NAME} (descricao);
 
     CREATE TABLE IF NOT EXISTS ${LOG_TABLE} (
       id BIGSERIAL PRIMARY KEY,
