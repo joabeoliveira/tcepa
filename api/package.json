@@ -9,6 +9,7 @@
     "dev": "node --watch src/index.js",
     "import": "node src/import-xml.js",
     "import:pg": "node src/import-xml-pg.js",
+    "import:notas-csv:pg": "node src/import-notas-fiscais-csv-pg.js",
     "migrate:pg": "node ../scripts/migrate-pg.js",
     "generate-api": "node ../scripts/generate-api.js",
     "build": "echo 'No build step required'"

@@ -44,6 +44,18 @@
     .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
     .badge-green { background: #e8f5e9; color: #2e7d32; }
     .badge-blue { background: #e3f2fd; color: #1565c0; }
+    .upload-grid { display: grid; grid-template-columns: 1.3fr .7fr; gap: 16px; align-items: start; }
+    .dropzone { border: 2px dashed #c7d2fe; background: linear-gradient(180deg, #f8faff, #ffffff); border-radius: 12px; padding: 18px; min-height: 180px; display: flex; flex-direction: column; gap: 12px; justify-content: center; }
+    .dropzone.dragover { border-color: #4361ee; background: #eef2ff; }
+    .dropzone h3 { font-size: 18px; }
+    .dropzone p { color: #667; line-height: 1.4; }
+    .upload-meta { display: grid; gap: 10px; }
+    .upload-progress { width: 100%; height: 10px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
+    .upload-progress > div { height: 100%; width: 0%; background: linear-gradient(90deg, #4361ee, #00b3a6); transition: width .2s; }
+    .upload-status { font-size: 13px; color: #555; }
+    .upload-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .btn-secondary { background: #eef2ff; color: #1d4ed8; }
+    .btn-secondary:hover { background: #e0e7ff; }
     #toast { position: fixed; bottom: 24px; right: 24px; background: #333; color: white; padding: 12px 24px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .3s; z-index: 999; }
     #toast.show { opacity: 1; }
   </style>
@@ -57,6 +69,36 @@
   </header>
 
   <div class="container">
+    <!-- Upload ETL -->
+    <div class="card">
+      <div class="upload-grid">
+        <div class="dropzone" id="dropzone">
+          <h3>Importar CSV de notas fiscais</h3>
+          <p>Arraste o arquivo aqui ou selecione no seu Windows. O upload é feito em blocos, e o servidor monta o CSV na VPS e inicia a importação automaticamente.</p>
+          <input type="file" id="csvFile" accept=".csv,text/csv" />
+          <div class="upload-actions">
+            <button class="btn btn-primary" onclick="iniciarUpload()">Enviar e importar</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('csvFile').value = ''">Limpar</button>
+          </div>
+        </div>
+        <div class="upload-meta">
+          <div class="card" style="margin:0; padding:16px;">
+            <strong>Status</strong>
+            <div class="upload-status" id="uploadStatus">Nenhum upload iniciado.</div>
+          </div>
+          <div class="card" style="margin:0; padding:16px;">
+            <strong>Progresso</strong>
+            <div class="upload-progress"><div id="uploadBar"></div></div>
+            <div class="upload-status" id="uploadPercent">0%</div>
+          </div>
+          <div class="card" style="margin:0; padding:16px;">
+            <strong>Resultado</strong>
+            <div class="upload-status" id="uploadResult">Aguardando arquivo.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Estatísticas -->
     <div class="stats" id="stats"></div>
 
@@ -92,11 +134,15 @@
 
   <script>
     const API = '/api/pesquisa';
+    const ETL_API = '/api/etl/notas/upload';
+    const CHUNK_SIZE = 5 * 1024 * 1024;
     let paginaAtual = 1;
+    let arquivoSelecionado = null;
 
     async function init() {
       await carregarMunicipios();
       await carregarStats();
+      setupDropzone();
     }
 
     async function carregarStats() {
@@ -184,6 +230,91 @@
       t.textContent = msg;
       t.classList.add('show');
       setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function setupDropzone() {
+      const dz = document.getElementById('dropzone');
+      const input = document.getElementById('csvFile');
+      input.addEventListener('change', () => {
+        arquivoSelecionado = input.files && input.files[0] ? input.files[0] : null;
+        if (arquivoSelecionado) toast(`Arquivo selecionado: ${arquivoSelecionado.name}`);
+      });
+      dz.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dz.classList.add('dragover');
+      });
+      dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+      dz.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dz.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          arquivoSelecionado = e.dataTransfer.files[0];
+          toast(`Arquivo selecionado: ${arquivoSelecionado.name}`);
+        }
+      });
+    }
+
+    function setUploadProgress(percent, status, result) {
+      document.getElementById('uploadBar').style.width = `${percent}%`;
+      document.getElementById('uploadPercent').textContent = `${Math.round(percent)}%`;
+      if (status) document.getElementById('uploadStatus').textContent = status;
+      if (result) document.getElementById('uploadResult').textContent = result;
+    }
+
+    async function iniciarUpload() {
+      const input = document.getElementById('csvFile');
+      const file = arquivoSelecionado || (input.files && input.files[0]);
+      if (!file) return toast('Selecione um arquivo CSV');
+      if (!file.name.toLowerCase().endsWith('.csv')) return toast('Envie um arquivo .csv');
+
+      const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE));
+      const uploadId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
+      setUploadProgress(0, `Enviando ${file.name}...`, 'Preparando upload');
+      toast(`Upload iniciado: ${file.name}`);
+
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        const start = chunkIndex * CHUNK_SIZE;
+        const end = Math.min(file.size, start + CHUNK_SIZE);
+        const chunk = file.slice(start, end);
+        const response = await fetch(`${ETL_API}?uploadId=${encodeURIComponent(uploadId)}&filename=${encodeURIComponent(file.name)}&chunkIndex=${chunkIndex}&totalChunks=${totalChunks}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          body: await chunk.arrayBuffer(),
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || 'Falha no upload');
+        }
+        const percent = ((chunkIndex + 1) / totalChunks) * 100;
+        setUploadProgress(percent, `Enviando ${chunkIndex + 1}/${totalChunks}`, `Upload em andamento`);
+      }
+
+      setUploadProgress(100, 'Upload concluído. A importação já foi disparada no servidor.', 'Aguardando processamento');
+      monitorarUpload(uploadId);
+    }
+
+    async function monitorarUpload(uploadId) {
+      const timer = setInterval(async () => {
+        try {
+          const r = await fetch(`${ETL_API}/${encodeURIComponent(uploadId)}`);
+          if (!r.ok) return;
+          const job = await r.json();
+          setUploadProgress(
+            job.status === 'success' ? 100 : document.getElementById('uploadBar').style.width || '100%',
+            `Status: ${job.status}`,
+            job.error ? job.error : (job.message || 'Processando')
+          );
+          if (job.status === 'success') {
+            clearInterval(timer);
+            toast('Importação concluída');
+            await carregarStats();
+          }
+          if (job.status === 'failed') {
+            clearInterval(timer);
+            toast('Falha na importação');
+          }
+        } catch (_) {}
+      }, 3000);
     }
 
     init();

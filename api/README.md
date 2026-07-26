@@ -241,3 +241,23 @@ docker exec -it <nome-do-container> node src/import-xml.js "/caminho/novos/*.xml
 ```
 
 > A importação usa `INSERT OR IGNORE`, então registros duplicados não serão reinseridos.
+
+---
+
+## 📥 Importação de CSV de notas fiscais
+
+Para importar o arquivo grande `202607_NFe_NotaFiscalItem.csv` no PostgreSQL do MVP:
+
+```bash
+cd api
+npm run import:notas-csv:pg -- "/app/xml/202607_NFe_NotaFiscalItem.csv"
+```
+
+O ETL:
+- cria a tabela `notas_fiscais_items` se ela não existir
+- cria tabela de log `etl_import_logs`
+- lê o CSV em streaming
+- insere em lotes
+- ignora duplicidades com `source_hash`
+
+Se o arquivo estiver em outra pasta, ajuste o caminho no comando.
