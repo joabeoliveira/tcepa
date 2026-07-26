@@ -311,17 +311,8 @@
         document.getElementById('previewStatus').textContent = 'Validando cabeçalho e preparando preview...';
         document.getElementById('previewPill').innerHTML = '';
         document.getElementById('previewTableWrap').innerHTML = '';
-        const sample = file.slice(0, 1024 * 64);
-        const response = await fetch(ETL_PREVIEW_API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/octet-stream', ...authHeaders() },
-          body: await sample.arrayBuffer(),
-        });
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || 'Falha ao validar preview');
-        }
-        const data = await response.json();
+        const sample = await file.slice(0, 1024 * 64).text();
+        const data = criarPreviewLocal(sample);
         const pillClass = data.validHeader ? 'ok' : 'warn';
         const pillText = data.validHeader ? 'Cabeçalho válido' : 'Cabeçalho incompleto';
         document.getElementById('previewPill').innerHTML = `<span class="pill ${pillClass}">${pillText}</span>`;
@@ -344,6 +335,37 @@
         document.getElementById('previewStatus').textContent = `Falha no preview: ${err.message}`;
         document.getElementById('previewPill').innerHTML = '<span class="pill warn">Preview indisponível</span>';
       }
+    }
+
+    function criarPreviewLocal(texto) {
+      const linhas = texto.replace(/^\uFEFF/, '').split(/\r?\n/).filter(linha => linha.trim());
+      if (!linhas.length) throw new Error('O arquivo CSV esta vazio.');
+      const delimitador = (linhas[0].match(/;/g) || []).length > (linhas[0].match(/,/g) || []).length ? ';' : ',';
+      const headers = dividirLinhaCsv(linhas[0], delimitador).map(valor => valor.trim());
+      const esperadas = ['chNFe', 'nNF', 'serie', 'dEmi', 'dhEmi', 'cMunFG', 'cMun', 'xMun', 'CNPJ', 'CPF', 'descricao', 'xProd', 'qCom', 'vUnCom', 'vProd'];
+      const missingHeaders = esperadas.filter(header => !headers.includes(header));
+      const preview = linhas.slice(1, 6).map(linha => {
+        const valores = dividirLinhaCsv(linha, delimitador);
+        return Object.fromEntries(headers.map((header, indice) => [header, valores[indice] || '']));
+      });
+      return { headers, preview, missingHeaders, validHeader: headers.some(header => esperadas.includes(header)) };
+    }
+
+    function dividirLinhaCsv(linha, delimitador) {
+      const valores = [];
+      let valor = '';
+      let entreAspas = false;
+      for (let indice = 0; indice < linha.length; indice += 1) {
+        const caractere = linha[indice];
+        if (caractere === '"') {
+          if (entreAspas && linha[indice + 1] === '"') { valor += '"'; indice += 1; }
+          else entreAspas = !entreAspas;
+        } else if (caractere === delimitador && !entreAspas) {
+          valores.push(valor); valor = '';
+        } else valor += caractere;
+      }
+      valores.push(valor);
+      return valores;
     }
 
     function setUploadProgress(percent, status, result) {
@@ -403,7 +425,11 @@
             toast('Importação concluída');
             await carregarStats();
             await carregarJobs();
-            document.getElementById('uploadResult').textContent = `Concluído: ${job.rowsInserted || 0} inseridas, ${job.rowsIgnored || 0} ignoradas, ${job.rowsFailed || 0} falhas.`;
+            const inseridas = job.rowsInserted || 0;
+            const ignoradas = job.rowsIgnored || 0;
+            document.getElementById('uploadResult').textContent = inseridas === 0 && ignoradas > 0
+              ? `Concluído: as ${ignoradas} linhas ja existiam no banco e foram ignoradas para evitar duplicidade.`
+              : `Concluído: ${inseridas} inseridas, ${ignoradas} ignoradas, ${job.rowsFailed || 0} falhas.`;
           }
           if (job.status === 'failed') {
             clearInterval(jobsTimer);

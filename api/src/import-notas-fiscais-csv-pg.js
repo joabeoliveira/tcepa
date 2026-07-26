@@ -102,6 +102,25 @@ function normalizeText(value) {
   return text.length > 0 ? text : null;
 }
 
+function readCsvOptions(filePath) {
+  const descriptor = fs.openSync(filePath, 'r');
+  try {
+    const sample = Buffer.alloc(64 * 1024);
+    const bytesRead = fs.readSync(descriptor, sample, 0, sample.length, 0);
+    const buffer = sample.subarray(0, bytesRead);
+    const firstLine = buffer.toString('latin1').split(/\r?\n/, 1)[0] || '';
+    const delimiter = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+
+    // Arquivos exportados pelo Windows frequentemente usam Latin-1; UTF-8 e valido
+    // quando nao ha bytes de substituicao ao decodificar a amostra.
+    const utf8 = buffer.toString('utf8');
+    const encoding = utf8.includes('\uFFFD') ? 'latin1' : 'utf8';
+    return { delimiter, encoding };
+  } finally {
+    fs.closeSync(descriptor);
+  }
+}
+
 function normalizeNumber(value) {
   if (value === null || value === undefined) return null;
   const text = String(value).trim();
@@ -282,16 +301,26 @@ async function logJobFinish(client, id, payload) {
 async function processFile(filePath) {
   const fileHash = await hashFile(filePath);
   const client = await pool.connect();
+  let logId;
+  let rowsRead = 0;
+  let rowsInserted = 0;
+  let rowsIgnored = 0;
+  let rowsFailed = 0;
 
   try {
     await ensureSchema();
     await client.query('BEGIN');
-    const logId = await logJobStart(client, path.basename(filePath), fileHash);
+    logId = await logJobStart(client, path.basename(filePath), fileHash);
     await client.query('COMMIT');
+  } finally {
+    client.release();
+  }
 
+  try {
     console.log(`[INFO] Arquivo: ${filePath}`);
 
     const stream = fs.createReadStream(filePath);
+    const csvOptions = readCsvOptions(filePath);
     const parser = parse({
       columns: true,
       skip_empty_lines: true,
@@ -299,12 +328,9 @@ async function processFile(filePath) {
       relax_quotes: true,
       relax_column_count: true,
       trim: true,
+      ...csvOptions,
     });
 
-    let rowsRead = 0;
-    let rowsInserted = 0;
-    let rowsIgnored = 0;
-    let rowsFailed = 0;
     let batch = [];
 
     const flushBatch = async () => {
@@ -344,72 +370,37 @@ async function processFile(filePath) {
       }
     };
 
-    await new Promise((resolve, reject) => {
-      let finished = false;
-      let streamError = null;
+    stream.pipe(parser);
+    for await (const record of parser) {
+      rowsRead += 1;
+      try {
+        batch.push(mapRecord(record));
+      } catch (error) {
+        rowsFailed += 1;
+        console.error(`[ERRO] Linha inválida ${rowsRead}: ${error.message}`);
+      }
 
-      parser.on('readable', async () => {
-        if (finished) return;
-        let record;
-        while ((record = parser.read())) {
-          rowsRead += 1;
-          try {
-            batch.push(mapRecord(record));
-          } catch (error) {
-            rowsFailed += 1;
-            console.error(`[ERRO] Linha inválida ${rowsRead}: ${error.message}`);
-          }
+      if (batch.length >= BATCH_SIZE) {
+        await flushBatch();
+      }
+    }
 
-          if (batch.length >= BATCH_SIZE) {
-            parser.pause();
-            try {
-              await flushBatch();
-            } finally {
-              parser.resume();
-            }
-          }
-        }
+    await flushBatch();
+    const message = `import concluído com ${rowsInserted} inseridos`;
+    await finish('success', message);
+    console.log(`[OK] ${path.basename(filePath)}: lidas=${rowsRead}, inseridas=${rowsInserted}, ignoradas=${rowsIgnored}, falhas=${rowsFailed}`);
+  } catch (error) {
+    console.error(`[ERRO] Importação falhou: ${error.message}`);
+    const finalClient = await pool.connect();
+    try {
+      await logJobFinish(finalClient, logId, {
+        status: 'failed', rows_read: rowsRead, rows_inserted: rowsInserted,
+        rows_ignored: rowsIgnored, rows_failed: rowsFailed, message: error.message,
       });
-
-      parser.on('error', async (error) => {
-        streamError = error;
-        finished = true;
-        console.error(`[ERRO] CSV inválido: ${error.message}`);
-        try {
-          await finish('failed', error.message);
-        } catch (logError) {
-          console.error(`[ERRO] Falha ao gravar log: ${logError.message}`);
-        }
-        reject(error);
-      });
-
-      parser.on('end', async () => {
-        if (finished) return;
-        finished = true;
-        try {
-          await flushBatch();
-          const message = `import concluído com ${rowsInserted} inseridos`;
-          await finish('success', message);
-          console.log(`[OK] ${path.basename(filePath)}: lidas=${rowsRead}, inseridas=${rowsInserted}, ignoradas=${rowsIgnored}, falhas=${rowsFailed}`);
-          resolve();
-        } catch (error) {
-          console.error(`[ERRO] Finalização falhou: ${error.message}`);
-          try {
-            await finish('failed', error.message);
-          } catch (logError) {
-            console.error(`[ERRO] Falha ao gravar log final: ${logError.message}`);
-          }
-          reject(error);
-        }
-      });
-
-      let record;
-      stream.on('error', reject);
-      parser.on('error', reject);
-      stream.pipe(parser);
-    });
-  } finally {
-    client.release();
+    } finally {
+      finalClient.release();
+    }
+    throw error;
   }
 }
 
