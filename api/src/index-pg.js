@@ -89,6 +89,14 @@ function parseSummary(stdout) {
   };
 }
 
+function createCsvParser(options) {
+  const parserFactory = parse && typeof parse === 'function' ? parse : (csvParse && csvParse.parse ? csvParse.parse : csvParse);
+  if (typeof parserFactory !== 'function') {
+    throw new Error('Parser CSV indisponível');
+  }
+  return parserFactory(options);
+}
+
 function validatePreviewHeaders(headers) {
   const normalized = headers.map((header) => String(header || '').trim()).filter(Boolean);
   const missing = EXPECTED_NOTE_HEADERS.filter((header) => !normalized.includes(header));
@@ -122,7 +130,7 @@ app.post('/api/etl/notas/preview', authMiddleware, express.raw({ type: '*/*', li
     const headers = firstLine.split(',').map((value) => value.replace(/^\uFEFF/, '').trim().replace(/^"|"$/g, ''));
 
     await new Promise((resolve, reject) => {
-      const parser = parse({
+      const parser = createCsvParser({
         columns: true,
         skip_empty_lines: true,
         bom: true,

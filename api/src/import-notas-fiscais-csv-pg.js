@@ -17,7 +17,8 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { parse } = require('csv-parse');
+const csvParse = require('csv-parse');
+const parse = csvParse.parse || csvParse;
 const { pool, getDatabase, fechar } = require('./database-pg');
 
 const TABLE_NAME = 'notas_fiscais_items';
@@ -305,8 +306,6 @@ async function processFile(filePath) {
     let rowsIgnored = 0;
     let rowsFailed = 0;
     let batch = [];
-    let done = false;
-    let streamError = null;
 
     const flushBatch = async () => {
       if (batch.length === 0) return;
@@ -345,70 +344,70 @@ async function processFile(filePath) {
       }
     };
 
-    parser.on('readable', async () => {
-      if (done) return;
-      let record;
-      while ((record = parser.read())) {
-        rowsRead += 1;
-        try {
-          batch.push(mapRecord(record));
-        } catch (error) {
-          rowsFailed += 1;
-          console.error(`[ERRO] Linha inválida ${rowsRead}: ${error.message}`);
-        }
+    await new Promise((resolve, reject) => {
+      let finished = false;
+      let streamError = null;
 
-        if (batch.length >= BATCH_SIZE) {
-          parser.pause();
+      parser.on('readable', async () => {
+        if (finished) return;
+        let record;
+        while ((record = parser.read())) {
+          rowsRead += 1;
           try {
-            await flushBatch();
-          } finally {
-            parser.resume();
+            batch.push(mapRecord(record));
+          } catch (error) {
+            rowsFailed += 1;
+            console.error(`[ERRO] Linha inválida ${rowsRead}: ${error.message}`);
+          }
+
+          if (batch.length >= BATCH_SIZE) {
+            parser.pause();
+            try {
+              await flushBatch();
+            } finally {
+              parser.resume();
+            }
           }
         }
-      }
-    });
+      });
 
-    parser.on('error', async (error) => {
-      streamError = error;
-      done = true;
-      console.error(`[ERRO] CSV inválido: ${error.message}`);
-      try {
-        await finish('failed', error.message);
-      } catch (logError) {
-        console.error(`[ERRO] Falha ao gravar log: ${logError.message}`);
-      }
-      process.exitCode = 1;
-    });
-
-    parser.on('end', async () => {
-      if (done) return;
-      done = true;
-
-      try {
-        await flushBatch();
-        const message = `import concluído com ${rowsInserted} inseridos`;
-        await finish('success', message);
-        console.log(`[OK] ${path.basename(filePath)}: lidas=${rowsRead}, inseridas=${rowsInserted}, ignoradas=${rowsIgnored}, falhas=${rowsFailed}`);
-      } catch (error) {
-        console.error(`[ERRO] Finalização falhou: ${error.message}`);
+      parser.on('error', async (error) => {
+        streamError = error;
+        finished = true;
+        console.error(`[ERRO] CSV inválido: ${error.message}`);
         try {
           await finish('failed', error.message);
         } catch (logError) {
-          console.error(`[ERRO] Falha ao gravar log final: ${logError.message}`);
+          console.error(`[ERRO] Falha ao gravar log: ${logError.message}`);
         }
-        process.exitCode = 1;
-      }
-    });
+        reject(error);
+      });
 
-    stream.pipe(parser);
+      parser.on('end', async () => {
+        if (finished) return;
+        finished = true;
+        try {
+          await flushBatch();
+          const message = `import concluído com ${rowsInserted} inseridos`;
+          await finish('success', message);
+          console.log(`[OK] ${path.basename(filePath)}: lidas=${rowsRead}, inseridas=${rowsInserted}, ignoradas=${rowsIgnored}, falhas=${rowsFailed}`);
+          resolve();
+        } catch (error) {
+          console.error(`[ERRO] Finalização falhou: ${error.message}`);
+          try {
+            await finish('failed', error.message);
+          } catch (logError) {
+            console.error(`[ERRO] Falha ao gravar log final: ${logError.message}`);
+          }
+          reject(error);
+        }
+      });
 
-    await new Promise((resolve, reject) => {
+      let record;
       stream.on('error', reject);
       parser.on('error', reject);
-      parser.on('end', resolve);
+      stream.pipe(parser);
     });
-
-    if (streamError) throw streamError;
   } finally {
     client.release();
   }
